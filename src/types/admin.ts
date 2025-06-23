@@ -1,20 +1,34 @@
-/**
- * Types específicos para o painel administrativo EiMusic
- * Tipagem forte obrigatória - ZERO any permitido
- */
+export type UserStatus = 'active' | 'inactive' | 'pending' | 'blocked';
+export type UserPlan = 'free' | 'premium' | 'vip';
+export type ArtistStatus = 'approved' | 'pending' | 'rejected' | 'blocked';
+export type ContentStatus = 'published' | 'pending' | 'rejected' | 'removed';
+export type PaymentMethod = 'M-Pesa' | 'E-Mola' | 'Visa' | 'Mastercard' | 'Transferência Bancária';
 
-import type { 
-  MozambicanCity, 
-  MozambicanGenre, 
-  UserStatus, 
-  ArtistStatus, 
-  ContentStatus, 
-  UserPlan, 
-  PaymentMethod 
-} from '@/data/constants';
+// Cidades moçambicanas
+export type MozambicanCity = 
+  | 'Maputo'
+  | 'Beira' 
+  | 'Nampula'
+  | 'Inhambane'
+  | 'Tete'
+  | 'Quelimane'
+  | 'Xai-Xai'
+  | 'Chimoio'
+  | 'Pemba'
+  | 'Lichinga';
 
-// Re-exportar types de constants para uso em outros arquivos
-export type { UserStatus, ArtistStatus, ContentStatus, UserPlan, PaymentMethod, MozambicanCity, MozambicanGenre };
+// Gêneros musicais moçambicanos
+export type MozambicanGenre = 
+  | 'Marrabenta'
+  | 'Pandza'
+  | 'Amapiano'
+  | 'Hip Hop'
+  | 'R&B'
+  | 'Afrobeat'
+  | 'Jazz & Soul'
+  | 'Kizomba'
+  | 'Zouk'
+  | 'Gospel';
 
 // Usuário do sistema (consumidor de conteúdo)
 export interface AdminUser {
@@ -109,7 +123,7 @@ export interface RecentActivity {
   status: 'success' | 'pending' | 'warning';
 }
 
-// Filtros para listagens
+// Filtros para usuários - CORRIGIDO
 export interface UserFilters {
   status?: UserStatus;
   plan?: UserPlan;
@@ -119,6 +133,7 @@ export interface UserFilters {
   dateTo?: string;
 }
 
+// Filtros para artistas
 export interface ArtistFilters {
   status?: ArtistStatus;
   genre?: MozambicanGenre;
@@ -130,6 +145,7 @@ export interface ArtistFilters {
   dateTo?: string;
 }
 
+// Filtros para conteúdo
 export interface ContentFilters {
   status?: ContentStatus;
   genre?: MozambicanGenre;

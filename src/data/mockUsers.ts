@@ -1,185 +1,181 @@
 /**
- * Dados mock de usuários moçambicanos para o EiMusic Admin
- * Todos os dados são realísticos e representativos de Moçambique
+ * Dados mock de usuários moçambicanos para o sistema administrativo
+ * Dados realísticos baseados no contexto de Moçambique
  */
 
-import { v4 as uuidv4 } from 'uuid';
-import type { AdminUser, UserFilters } from '@/types/admin';
-import { 
-  MOZAMBICAN_CITIES,
-  MOZAMBICAN_MALE_NAMES,
-  MOZAMBICAN_FEMALE_NAMES, 
-  MOZAMBICAN_SURNAMES,
-  USER_STATUS,
-  USER_PLANS,
-  PAYMENT_METHODS
-} from './constants';
+import type { AdminUser } from '@/types/admin';
+import type { PaymentMethod } from '@/types/admin';
 
-// Função auxiliar para gerar nomes moçambicanos realísticos
-function generateMozambicanName(): string {
-  const isMale = Math.random() > 0.5;
-  const firstName = isMale 
-    ? MOZAMBICAN_MALE_NAMES[Math.floor(Math.random() * MOZAMBICAN_MALE_NAMES.length)]
-    : MOZAMBICAN_FEMALE_NAMES[Math.floor(Math.random() * MOZAMBICAN_FEMALE_NAMES.length)];
-  const surname = MOZAMBICAN_SURNAMES[Math.floor(Math.random() * MOZAMBICAN_SURNAMES.length)];
-  return `${firstName} ${surname}`;
+// Nomes moçambicanos realísticos
+const mozambicanNames = [
+  'João Macamo', 'Maria Sitoe', 'Carlos Nhongo', 'Ana Chissano',
+  'Fernando Matusse', 'Beatriz Mondlane', 'António Muchanga', 'Rosa Cossa',
+  'Pedro Massingue', 'Lurdes Machel', 'Eduardo Guebuza', 'Graça Simbine',
+  'Armando Manhiça', 'Esperança Bias', 'Joaquim Chissano', 'Paulina Samuel',
+  'Venâncio Mondlane', 'Marcelina Chissano', 'Samora Moises', 'Helena Taipo',
+  'Alberto Chipande', 'Josina Machel', 'Pascoal Mocumbi', 'Alcinda Abreu',
+  'Filipe Nyusi', 'Verónica Macamo', 'Oldemiro Balói', 'Luísa Diogo'
+];
+
+// Cidades moçambicanas
+const mozambicanCities = [
+  'Maputo', 'Beira', 'Nampula', 'Inhambane', 'Tete', 
+  'Quelimane', 'Xai-Xai', 'Chimoio', 'Pemba', 'Lichinga'
+] as const;
+
+// Provedores de email populares em Moçambique
+const emailProviders = ['gmail.com', 'hotmail.com', 'outlook.com', 'yahoo.com', 'eimusic.co.mz'];
+
+// Métodos de pagamento populares em Moçambique
+const paymentMethods: PaymentMethod[] = ['M-Pesa', 'E-Mola', 'Visa', 'Mastercard', 'Transferência Bancária'];
+
+/**
+ * Gerar telefone moçambicano realístico
+ */
+function generateMozambicanPhone(): string {
+  const operators = ['84', '85', '86', '87']; // Operadoras principais
+  const operator = operators[Math.floor(Math.random() * operators.length)];
+  const number = Math.floor(Math.random() * 9000000) + 1000000; // 7 dígitos
+  return `+258 ${operator} ${number.toString().slice(0, 3)} ${number.toString().slice(3)}`;
 }
 
-// Função auxiliar para gerar email baseado no nome
+/**
+ * Gerar email baseado no nome
+ */
 function generateEmail(name: string): string {
   const cleanName = name.toLowerCase()
     .replace(/\s+/g, '.')
-    .replace(/[áàãâ]/g, 'a')
-    .replace(/[éèê]/g, 'e')
-    .replace(/[íì]/g, 'i')
-    .replace(/[óòõô]/g, 'o')
-    .replace(/[úù]/g, 'u')
-    .replace(/ç/g, 'c');
-  
-  const domains = ['gmail.com', 'hotmail.com', 'yahoo.com', 'outlook.com'];
-  const domain = domains[Math.floor(Math.random() * domains.length)];
-  
-  return `${cleanName}@${domain}`;
+    .replace(/[^a-z.]/g, '');
+  const provider = emailProviders[Math.floor(Math.random() * emailProviders.length)];
+  return `${cleanName}@${provider}`;
 }
 
-// Função auxiliar para gerar telefone moçambicano
-function generateMozambicanPhone(): string {
-  const prefixes = ['84', '85', '86', '87'];
-  const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-  const number = Math.floor(1000000 + Math.random() * 9000000);
-  return `+258 ${prefix} ${number}`;
-}
-
-// Função auxiliar para gerar data aleatória
-function generateRandomDate(daysAgo: number): string {
+/**
+ * Gerar data aleatória nos últimos 2 anos
+ */
+function generateRandomDate(daysBack: number): string {
   const date = new Date();
-  date.setDate(date.getDate() - Math.floor(Math.random() * daysAgo));
+  date.setDate(date.getDate() - Math.floor(Math.random() * daysBack));
   return date.toISOString();
 }
 
-// Gerar dados mock de usuários
-function generateMockUsers(count: number): AdminUser[] {
-  return Array.from({ length: count }, () => {
-    const name = generateMozambicanName();
-    const registeredDaysAgo = Math.floor(Math.random() * 365);
-    const lastActivityDaysAgo = Math.floor(Math.random() * 30);
-    const plan = Object.values(USER_PLANS)[Math.floor(Math.random() * Object.values(USER_PLANS).length)];
-    
-    // Usuários premium/vip têm maior probabilidade de serem ativos
-    const isActive = plan !== 'free' ? Math.random() > 0.1 : Math.random() > 0.3;
-    const status = isActive 
-      ? (Math.random() > 0.95 ? USER_STATUS.PENDING : USER_STATUS.ACTIVE)
-      : (Math.random() > 0.7 ? USER_STATUS.BLOCKED : USER_STATUS.ACTIVE);
-
-    // Gasto total baseado no plano
-    let totalSpent = 0;
-    if (plan === 'premium') {
-      totalSpent = Math.floor(200 + Math.random() * 800); // 200-1000 MT
-    } else if (plan === 'vip') {
-      totalSpent = Math.floor(500 + Math.random() * 1500); // 500-2000 MT
-    } else {
-      totalSpent = Math.floor(Math.random() * 200); // 0-200 MT para free
-    }
-
-    const isSubscriptionActive = plan !== 'free' && status === 'active' && Math.random() > 0.2;
-
-    return {
-      id: uuidv4(),
-      name,
-      email: generateEmail(name),
-      phone: generateMozambicanPhone(),
-      plan,
-      status,
-      registeredAt: generateRandomDate(registeredDaysAgo),
-      lastActivity: generateRandomDate(lastActivityDaysAgo),
-      totalSpent,
-      location: MOZAMBICAN_CITIES[Math.floor(Math.random() * MOZAMBICAN_CITIES.length)],
-      preferredPayment: PAYMENT_METHODS[Math.floor(Math.random() * PAYMENT_METHODS.length)],
-      isSubscriptionActive,
-      subscriptionEndDate: isSubscriptionActive 
-        ? new Date(Date.now() + Math.random() * 365 * 24 * 60 * 60 * 1000).toISOString()
-        : undefined,
-      profileImage: Math.random() > 0.7 
-        ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name)}`
-        : undefined
-    };
-  });
-}
-
-// Dados mock - 150 usuários para simulação realística
-export const MOCK_USERS: AdminUser[] = generateMockUsers(150);
-
-// Função para filtrar usuários (simula busca)
-export function filterUsers(users: AdminUser[], filters: UserFilters): AdminUser[] {
-  return users.filter(user => {
-    // Filtro por status
-    if (filters.status && user.status !== filters.status) {
-      return false;
-    }
-
-    // Filtro por plano
-    if (filters.plan && user.plan !== filters.plan) {
-      return false;
-    }
-
-    // Filtro por localização
-    if (filters.location && user.location !== filters.location) {
-      return false;
-    }
-
-    // Busca por termo (nome ou email)
-    if (filters.searchTerm) {
-      const term = filters.searchTerm.toLowerCase();
-      const matchesName = user.name.toLowerCase().includes(term);
-      const matchesEmail = user.email.toLowerCase().includes(term);
-      if (!matchesName && !matchesEmail) {
-        return false;
-      }
-    }
-
-    // Filtro por data
-    if (filters.dateFrom) {
-      const userDate = new Date(user.registeredAt);
-      const fromDate = new Date(filters.dateFrom);
-      if (userDate < fromDate) {
-        return false;
-      }
-    }
-
-    if (filters.dateTo) {
-      const userDate = new Date(user.registeredAt);
-      const toDate = new Date(filters.dateTo);
-      if (userDate > toDate) {
-        return false;
-      }
-    }
-
-    return true;
-  });
-}
-
-// Estatísticas dos usuários para dashboard
-export function getUserStats(users: AdminUser[]) {
-  const activeUsers = users.filter(u => u.status === 'active').length;
-  const premiumUsers = users.filter(u => u.plan === 'premium').length;
-  const vipUsers = users.filter(u => u.plan === 'vip').length;
-  const totalRevenue = users.reduce((sum, u) => sum + u.totalSpent, 0);
+/**
+ * Gerar dados de usuário moçambicano realístico
+ */
+function generateMozambicanUser(index: number): AdminUser {
+  const name = mozambicanNames[index % mozambicanNames.length];
+  const location = mozambicanCities[Math.floor(Math.random() * mozambicanCities.length)];
+  const registeredAt = generateRandomDate(730); // Últimos 2 anos
+  const lastActivity = generateRandomDate(30); // Últimos 30 dias
   
-  const last30Days = new Date();
-  last30Days.setDate(last30Days.getDate() - 30);
-  const newUsersThisMonth = users.filter(u => new Date(u.registeredAt) >= last30Days).length;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const activeToday = users.filter(u => new Date(u.lastActivity) >= today).length;
+  // Status baseado em probabilidades realísticas
+  const statusProbability = Math.random();
+  const status = statusProbability < 0.7 ? 'active' : 
+                statusProbability < 0.85 ? 'inactive' :
+                statusProbability < 0.95 ? 'pending' : 'blocked';
+  
+  // Plano baseado no status
+  const planProbability = Math.random();
+  const plan = status === 'blocked' ? 'free' :
+               planProbability < 0.6 ? 'free' :
+               planProbability < 0.85 ? 'premium' : 'vip';
+  
+  // Gasto baseado no plano e tempo na plataforma
+  const monthsActive = Math.floor((Date.now() - new Date(registeredAt).getTime()) / (1000 * 60 * 60 * 24 * 30));
+  const baseSpent = plan === 'vip' ? 500 : plan === 'premium' ? 200 : 50;
+  const totalSpent = Math.floor(baseSpent * monthsActive * (0.5 + Math.random()));
 
   return {
-    total: users.length,
-    active: activeUsers,
-    premium: premiumUsers,
-    vip: vipUsers,
-    totalRevenue,
-    newThisMonth: newUsersThisMonth,
-    activeToday
+    id: `user_${String(index + 1).padStart(3, '0')}`,
+    name,
+    email: generateEmail(name),
+    phone: generateMozambicanPhone(),
+    plan,
+    status,
+    registeredAt,
+    lastActivity: status === 'active' ? lastActivity : registeredAt,
+    totalSpent,
+    location,
+    preferredPayment: paymentMethods[Math.floor(Math.random() * paymentMethods.length)],
+    profileImage: Math.random() > 0.3 ? `https://api.dicebear.com/7.x/avataaars/svg?seed=${name.replace(/\s+/g, '')}` : undefined,
+    isSubscriptionActive: plan !== 'free' && status === 'active',
+    subscriptionEndDate: plan !== 'free' ? (() => {
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + 1);
+      return endDate.toISOString();
+    })() : undefined
   };
 }
+
+/**
+ * Usuários mock moçambicanos (150 usuários)
+ */
+export const MOCK_USERS: AdminUser[] = Array.from({ length: 150 }, (_, index) => 
+  generateMozambicanUser(index)
+);
+
+/**
+ * Estatísticas calculadas dos usuários
+ */
+export const USER_STATISTICS = {
+  total: MOCK_USERS.length,
+  active: MOCK_USERS.filter(u => u.status === 'active').length,
+  inactive: MOCK_USERS.filter(u => u.status === 'inactive').length,
+  pending: MOCK_USERS.filter(u => u.status === 'pending').length,
+  blocked: MOCK_USERS.filter(u => u.status === 'blocked').length,
+  premium: MOCK_USERS.filter(u => u.plan === 'premium').length,
+  vip: MOCK_USERS.filter(u => u.plan === 'vip').length,
+  totalRevenue: MOCK_USERS.reduce((sum, u) => sum + u.totalSpent, 0),
+  averageSpent: Math.floor(MOCK_USERS.reduce((sum, u) => sum + u.totalSpent, 0) / MOCK_USERS.length)
+};
+
+/**
+ * Usuários por cidade (para analytics)
+ */
+export const USERS_BY_CITY = mozambicanCities.map(city => ({
+  city,
+  count: MOCK_USERS.filter(u => u.location === city).length,
+  revenue: MOCK_USERS.filter(u => u.location === city).reduce((sum, u) => sum + u.totalSpent, 0)
+}));
+
+/**
+ * Crescimento mensal simulado
+ */
+export const USER_GROWTH_DATA = Array.from({ length: 12 }, (_, index) => {
+  const date = new Date();
+  date.setMonth(date.getMonth() - (11 - index));
+  
+  return {
+    month: date.toLocaleDateString('pt-PT', { month: 'short', year: 'numeric' }),
+    users: Math.floor(50 + (index * 15) + (Math.random() * 20)),
+    revenue: Math.floor(5000 + (index * 2000) + (Math.random() * 3000))
+  };
+});
+
+/**
+ * Filtrar usuários por critérios
+ */
+export function filterUsers(
+  users: AdminUser[],
+  filters: {
+    searchTerm?: string;
+    status?: string;
+    plan?: string;
+    location?: string;
+  }
+) {
+  return users.filter(user => {
+    const matchesSearch = !filters.searchTerm || 
+      user.name.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+      user.email.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
+      user.phone.includes(filters.searchTerm);
+    
+    const matchesStatus = !filters.status || filters.status === 'all' || user.status === filters.status;
+    const matchesPlan = !filters.plan || filters.plan === 'all' || user.plan === filters.plan;
+    const matchesLocation = !filters.location || filters.location === 'all' || user.location === filters.location;
+    
+    return matchesSearch && matchesStatus && matchesPlan && matchesLocation;
+  });
+}
+
+export default MOCK_USERS;
