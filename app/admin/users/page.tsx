@@ -1,165 +1,258 @@
+// app/admin/users/page.tsx
 'use client';
 
-import { useState } from 'react';
-import { UserPlus, Download, Filter } from 'lucide-react';
-import DataTable from '@/components/admin/DataTable';
-import SearchBar from '@/components/admin/SearchBar';
-import { mockUsers } from '@/data/mockups';
-import type { User, TableColumn } from '@/types/admin';
+import { useState, useEffect } from 'react';
+import { Edit, Trash2 } from 'lucide-react';
 import Image from 'next/image';
+import DataTable from '@/components/admin/DataTable';
+import FilterBar from '@/components/admin/FilterBar';
+import { 
+  mockUsersData, 
+  filterUsers,
+  type UserRecord 
+} from '@/data/usersData';
+import type { FilterConfig } from '@/types/admin';
 
 export default function UsersPage() {
+  const [filteredUsers, setFilteredUsers] = useState<UserRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterPlan, setFilterPlan] = useState<string>('all');
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
-  // Filter users
-  const filteredUsers = mockUsers.filter((user) => {
-    const matchesSearch = user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPlan = filterPlan === 'all' || user.plan === filterPlan;
-    return matchesSearch && matchesPlan;
-  });
+  // Inicializar os usuários filtrados com todos os usuários
+  useEffect(() => {
+    setFilteredUsers(mockUsersData);
+  }, []);
 
-  // Table columns
-  const columns: TableColumn<User>[] = [
+  // Configuração dos filtros
+  const filters: FilterConfig[] = [
     {
-      key: 'name',
-      label: 'User',
+      key: 'status',
+      label: 'Status',
+      type: 'select',
+      options: [
+        { value: 'active', label: 'Ativo' },
+        { value: 'inactive', label: 'Inativo' },
+        { value: 'suspended', label: 'Suspenso' },
+      ],
+    },
+    {
+      key: 'plan',
+      label: 'Plano',
+      type: 'select',
+      options: [
+        { value: 'free', label: 'Gratuito' },
+        { value: 'premium', label: 'Premium' },
+        { value: 'vip', label: 'VIP' },
+      ],
+    },
+    {
+      key: 'joinedDate',
+      label: 'Data de Ingresso',
+      type: 'date',
+    },
+  ];
+
+  // Configuração das colunas da tabela
+  const columns = [
+    {
+      key: 'name' as keyof UserRecord,
+      label: 'Usuário',
       sortable: true,
-      render: (value, item) => (
-        <div className="flex items-center space-x-3">
-          <Image
-            src={item.avatar || 'https://ui-avatars.com/api/?name=User&background=6366f1&color=fff'}
-            alt={item.name}
-            width={40}
-            height={40}
-            className="rounded-full"
-          />
-          <div>
-            <p className="font-medium">{item.name}</p>
-            <p className="text-xs text-gray-500">{item.email}</p>
+      render: (value: unknown, user: UserRecord) => (
+        <div className="flex items-center">
+          <div className="flex-shrink-0 h-10 w-10">
+            <Image
+              className="h-10 w-10 rounded-full"
+              src={user.avatar?.toString() || 'https://ui-avatars.com/api/?name=Unknown&background=6366f1&color=fff'}
+              alt={user.name?.toString() || 'Usuário'}
+              width={40}
+              height={40}
+            />
+          </div>
+          <div className="ml-4">
+            <div className="text-sm font-medium text-gray-900">{user.name}</div>
+            <div className="text-sm text-gray-500">{user.email}</div>
           </div>
         </div>
       ),
     },
     {
-      key: 'plan',
-      label: 'Plan',
-      render: (value) => (
-        <span className={`
-          px-2 py-1 text-xs font-medium rounded-full capitalize
-          ${value === 'premium' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800'}
-        `}>
-          {value}
-        </span>
+      key: 'plan' as keyof UserRecord,
+      label: 'Plano',
+      sortable: true,
+      render: (value: unknown) => {
+        const plan = String(value);
+        let planClass = '';
+        let planText = '';
+        
+        switch (plan) {
+          case 'free':
+            planClass = 'bg-gray-100 text-gray-800';
+            planText = 'Gratuito';
+            break;
+          case 'premium':
+            planClass = 'bg-purple-100 text-purple-800';
+            planText = 'Premium';
+            break;
+          case 'vip':
+            planClass = 'bg-indigo-100 text-indigo-800';
+            planText = 'VIP';
+            break;
+          default:
+            planClass = 'bg-gray-100 text-gray-800';
+            planText = plan;
+        }
+        
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${planClass}`}>
+            {planText}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'joinedDate' as keyof UserRecord,
+      label: 'Data de Ingresso',
+      sortable: true,
+      render: (value: unknown) => {
+        const date = new Date(String(value));
+        return new Intl.DateTimeFormat('pt-MZ', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }).format(date);
+      },
+    },
+    {
+      key: 'lastActive' as keyof UserRecord,
+      label: 'Última Atividade',
+      sortable: true,
+      render: (value: unknown) => {
+        const date = new Date(String(value));
+        return new Intl.DateTimeFormat('pt-MZ', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        }).format(date);
+      },
+    },
+    {
+      key: 'totalSpent' as keyof UserRecord,
+      label: 'Total Gasto',
+      sortable: true,
+      render: (value: unknown) => (
+        <span>MT {Number(value).toLocaleString('pt-MZ')}</span>
       ),
     },
     {
-      key: 'joinedDate',
-      label: 'Joined',
-      sortable: true,
-      render: (value) => new Date(String(value)).toLocaleDateString('pt-MZ'),
-    },
-    {
-      key: 'lastActive',
-      label: 'Last Active',
-      sortable: true,
-      render: (value) => new Date(String(value)).toLocaleDateString('pt-MZ'),
-    },
-    {
-      key: 'totalSpent',
-      label: 'Total Spent',
-      sortable: true,
-      render: (value) => `MT ${Number(value).toLocaleString()}`,
-    },
-    {
-      key: 'status',
+      key: 'status' as keyof UserRecord,
       label: 'Status',
-      render: (value) => (
-        <span className={`
-          px-2 py-1 text-xs font-medium rounded-full capitalize
-          ${value === 'active' ? 'bg-green-100 text-green-800' :
-            value === 'inactive' ? 'bg-gray-100 text-gray-800' :
-            'bg-red-100 text-red-800'}
-        `}>
-          {value}
-        </span>
+      sortable: true,
+      render: (value: unknown) => {
+        const status = String(value);
+        let statusClass = '';
+        let statusText = '';
+        
+        switch (status) {
+          case 'active':
+            statusClass = 'bg-green-100 text-green-800';
+            statusText = 'Ativo';
+            break;
+          case 'inactive':
+            statusClass = 'bg-yellow-100 text-yellow-800';
+            statusText = 'Inativo';
+            break;
+          case 'suspended':
+            statusClass = 'bg-red-100 text-red-800';
+            statusText = 'Suspenso';
+            break;
+          default:
+            statusClass = 'bg-gray-100 text-gray-800';
+            statusText = status;
+        }
+        
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+            {statusText}
+          </span>
+        );
+      },
+    },
+    {
+      key: 'id' as keyof UserRecord,
+      label: 'Ações',
+      render: () => (
+        <div className="flex space-x-2">
+          <button 
+            className="text-indigo-600 hover:text-indigo-900"
+            aria-label="Editar usuário"
+          >
+            <Edit className="h-5 w-5" />
+          </button>
+          <button 
+            className="text-red-600 hover:text-red-900"
+            aria-label="Excluir usuário"
+          >
+            <Trash2 className="h-5 w-5" />
+          </button>
+        </div>
       ),
     },
   ];
 
+  // Manipuladores de eventos
+  const handleFilterChange = (filterKey: string, value: string) => {
+    const newFilters = { ...activeFilters, [filterKey]: value };
+    setActiveFilters(newFilters);
+    
+    // Aplicar filtros aos dados usando a função do arquivo de dados
+    const filtered = filterUsers(mockUsersData, newFilters, searchQuery);
+    setFilteredUsers(filtered);
+  };
+
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    
+    // Aplicar a nova pesquisa junto com os filtros existentes
+    const filtered = filterUsers(mockUsersData, activeFilters, query);
+    setFilteredUsers(filtered);
+  };
+
+  const handleResetFilters = () => {
+    setActiveFilters({});
+    setSearchQuery('');
+    setFilteredUsers(mockUsersData);
+  };
+
+  const handleRowClick = (user: UserRecord) => {
+    console.log('User clicked:', user);
+    // Implementar a lógica de navegação ou exibição de detalhes aqui
+  };
+
   return (
     <div>
-      {/* Page Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Users</h1>
-          <p className="text-gray-600 mt-1">Manage platform users and subscriptions</p>
-        </div>
-        <div className="flex space-x-3">
-          <button className="flex items-center px-4 py-2 bg-white border border-gray-300 hover:bg-gray-50 rounded-lg transition-colors">
-            <Download size={20} className="mr-2" />
-            Export
-          </button>
-          <button className="flex items-center px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg transition-colors">
-            <UserPlus size={20} className="mr-2" />
-            Add User
-          </button>
-        </div>
+      {/* Cabeçalho da página */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Usuários</h1>
+        <p className="text-gray-600 mt-1">
+          Gerencie os usuários da plataforma EiMusic.
+        </p>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* Search */}
-          <SearchBar
-            value={searchQuery}
-            onChange={setSearchQuery}
-            placeholder="Search users..."
-          />
+      {/* Barra de filtros */}
+      <FilterBar
+        filters={filters}
+        onFilterChange={handleFilterChange}
+        onSearchChange={handleSearchChange}
+        onReset={handleResetFilters}
+      />
 
-          {/* Plan Filter */}
-          <div className="relative">
-            <Filter className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-            <select
-              value={filterPlan}
-              onChange={(e) => setFilterPlan(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 appearance-none"
-            >
-              <option value="all">All Plans</option>
-              <option value="free">Free</option>
-              <option value="premium">Premium</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Users Table */}
+      {/* Tabela de usuários */}
       <DataTable
         data={filteredUsers}
         columns={columns}
-        onRowClick={(user) => console.log('User clicked:', user)}
+        onRowClick={handleRowClick}
       />
-
-      {/* Summary Stats */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600">Total Users</p>
-          <p className="text-2xl font-bold text-gray-900">{mockUsers.length}</p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600">Premium Users</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {mockUsers.filter(u => u.plan === 'premium').length}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg shadow p-4">
-          <p className="text-sm text-gray-600">Total Revenue</p>
-          <p className="text-2xl font-bold text-gray-900">
-            MT {mockUsers.reduce((sum, u) => sum + u.totalSpent, 0).toLocaleString()}
-          </p>
-        </div>
-      </div>
     </div>
   );
 }

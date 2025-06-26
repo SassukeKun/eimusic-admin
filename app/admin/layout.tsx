@@ -1,10 +1,11 @@
+// app/admin/layout.tsx
 import { Metadata } from 'next';
 import Sidebar from '@/components/admin/Sidebar';
 import Header from '@/components/admin/Header';
 
 export const metadata: Metadata = {
   title: 'EiMusic Admin - Dashboard',
-  description: 'Admin panel for EiMusic platform',
+  description: 'Painel administrativo da plataforma EiMusic',
 };
 
 interface AdminLayoutProps {
@@ -13,23 +14,21 @@ interface AdminLayoutProps {
 
 export default function AdminLayout({ children }: AdminLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex h-screen overflow-hidden">
-        {/* Sidebar */}
-        <Sidebar />
+    <div className="min-h-screen flex bg-background">
+      {/* Sidebar */}
+      <Sidebar />
+      
+      {/* Main content */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <Header />
         
-        {/* Main content */}
-        <div className="flex-1 flex flex-col overflow-hidden">
-          {/* Header */}
-          <Header />
-          
-          {/* Page content */}
-          <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
-            <div className="max-w-7xl mx-auto">
-              {children}
-            </div>
-          </main>
-        </div>
+        {/* Page content */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

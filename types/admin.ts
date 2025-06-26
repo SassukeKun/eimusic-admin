@@ -101,3 +101,29 @@ export interface FilterConfig {
   type: 'select' | 'search' | 'date' | 'range';
   options?: FilterOption[];
 }
+
+
+// Interface para planos de monetização
+export interface MonetizationPlan {
+  id: string;
+  name: string;
+  price: number; // Valor em MT
+  subscribers: number;
+  monthlyRevenue: number; // Valor em MT
+  features: string[];
+  status: 'active' | 'deprecated' | 'coming_soon';
+}
+
+// Interface para transações de receita
+export interface RevenueTransaction {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar?: string;
+  amount: number; // Valor em MT
+  type: 'subscription' | 'one_time' | 'refund';
+  planId?: string;
+  planName?: string;
+  date: string;
+  status: 'completed' | 'pending' | 'failed' | 'refunded';
+}

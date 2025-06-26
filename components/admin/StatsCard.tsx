@@ -1,3 +1,4 @@
+// components/admin/StatsCard.tsx
 'use client';
 
 import { motion } from 'framer-motion';
@@ -29,40 +30,41 @@ export default function StatsCard({
   const isPositive = changeType === 'increase';
   const TrendIcon = isPositive ? TrendingUp : TrendingDown;
   
+  // Formatação de valores numéricos para exibição com separador de milhares
+  const formattedValue = typeof value === 'number' 
+    ? new Intl.NumberFormat('pt-MZ').format(value) 
+    : value;
+  
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow"
+      className="card hover:shadow transition-all duration-200"
     >
-      <div className="flex items-center justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-gray-600">{title}</p>
-          <p className="text-2xl font-bold text-gray-900 mt-2">
-            {prefix}{typeof value === 'number' ? value.toLocaleString() : value}{suffix}
-          </p>
-          <div className="flex items-center mt-4">
-            <TrendIcon 
-              className={`h-4 w-4 ${
-                isPositive ? 'text-green-500' : 'text-red-500'
-              }`} 
-            />
-            <span className={`text-sm font-medium ml-1 ${
-              isPositive ? 'text-green-600' : 'text-red-600'
-            }`}>
-              {Math.abs(change)}%
-            </span>
-            <span className="text-sm text-gray-500 ml-2">vs last month</span>
+      <div className="p-6">
+        <div className="flex items-center justify-between">
+          <div className="flex-1">
+            <p className="text-sm font-medium text-muted">{title}</p>
+            <p className="text-2xl font-bold text-foreground mt-2">
+              {prefix}{formattedValue}{suffix}
+            </p>
+            <div className="flex items-center mt-4">
+              <div className={`flex items-center text-sm font-medium ${
+                isPositive ? 'text-success' : 'text-danger'
+              }`}>
+                <TrendIcon className="size-4 mr-1" />
+                {Math.abs(change).toFixed(1)}%
+              </div>
+              <span className="text-sm text-muted ml-2">vs mês anterior</span>
+            </div>
           </div>
-        </div>
-        <div className="ml-4">
-          <div className={`p-3 rounded-full ${
-            isPositive ? 'bg-green-100' : 'bg-red-100'
-          }`}>
-            <Icon className={`h-6 w-6 ${
-              isPositive ? 'text-green-600' : 'text-red-600'
-            }`} />
+          <div className="ml-4">
+            <div className={`flex items-center justify-center size-12 rounded-full ${
+              isPositive ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'
+            }`}>
+              <Icon className="size-6" />
+            </div>
           </div>
         </div>
       </div>
