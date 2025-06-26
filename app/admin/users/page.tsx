@@ -1,22 +1,36 @@
 // app/admin/users/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Edit, Trash2 } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Edit, Trash2, Plus } from 'lucide-react';
 import Image from 'next/image';
 import DataTable from '@/components/admin/DataTable';
 import FilterBar from '@/components/admin/FilterBar';
+import PageHeader from '@/components/admin/PageHeader';
+import Button from '@/components/admin/Button';
+import ConfirmationModal from '@/components/admin/ConfirmationModal';
+import EditUserModal from '@/components/ui/EditUserModal';
+import { useToast } from '@/components/hooks/useToast';
 import { 
   mockUsersData, 
   filterUsers,
   type UserRecord 
 } from '@/data/usersData';
 import type { FilterConfig } from '@/types/admin';
+import type { UserFormData } from '@/types/modal';
+import type { ArtistStatus } from '@/types/modal';
 
 export default function UsersPage() {
   const [filteredUsers, setFilteredUsers] = useState<UserRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
+  const [selectedUser, setSelectedUser] = useState<UserRecord | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [editMode, setEditMode] = useState<'create' | 'edit'>('edit');
+  
+  const { success, error } = useToast();
 
   // Inicializar os usuários filtrados com todos os usuários
   useEffect(() => {
@@ -255,7 +269,7 @@ export default function UsersPage() {
             statusText = 'Ativo';
             break;
           case 'inactive':
-            statusClass = 'bg-yellow-100 text-yellow-800';
+            statusClass = 'bg-gray-100 text-gray-800';
             statusText = 'Inativo';
             break;
           case 'suspended':
@@ -275,41 +289,44 @@ export default function UsersPage() {
       },
     },
     {
-      key: 'id' as keyof UserRecord,
+      key: 'actions',
       label: 'Ações',
-      render: () => (
+      render: (_: unknown, user: UserRecord) => (
         <div className="flex space-x-2">
-          <button 
-            className="text-indigo-600 hover:text-indigo-900"
-            aria-label="Editar usuário"
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditClick(user);
+            }}
+            className="p-1 text-blue-600 hover:text-blue-800 focus:outline-none"
           >
-            <Edit className="h-5 w-5" />
+            <Edit size={16} />
           </button>
-          <button 
-            className="text-red-600 hover:text-red-900"
-            aria-label="Excluir usuário"
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteClick(user);
+            }}
+            className="p-1 text-red-600 hover:text-red-800 focus:outline-none"
           >
-            <Trash2 className="h-5 w-5" />
+            <Trash2 size={16} />
           </button>
         </div>
       ),
     },
   ];
 
-  // Manipuladores de eventos
   const handleFilterChange = (filterKey: string, value: string) => {
-    const newFilters = { ...activeFilters, [filterKey]: value };
-    setActiveFilters(newFilters);
-    
-    // Aplicar filtros aos dados usando a função do arquivo de dados
-    const filtered = filterUsers(mockUsersData, newFilters, searchQuery);
-    setFilteredUsers(filtered);
+    setActiveFilters(prev => {
+      const newFilters = { ...prev, [filterKey]: value };
+      const filtered = filterUsers(mockUsersData, newFilters, searchQuery);
+      setFilteredUsers(filtered);
+      return newFilters;
+    });
   };
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
-    
-    // Aplicar a nova pesquisa junto com os filtros existentes
     const filtered = filterUsers(mockUsersData, activeFilters, query);
     setFilteredUsers(filtered);
   };
@@ -321,33 +338,176 @@ export default function UsersPage() {
   };
 
   const handleRowClick = (user: UserRecord) => {
-    console.log('User clicked:', user);
-    // Implementar a lógica de navegação ou exibição de detalhes aqui
+    setSelectedUser(user);
+    setEditMode('edit');
+    setIsEditModalOpen(true);
   };
+  
+  const handleEditClick = useCallback((user: UserRecord) => {
+    setSelectedUser(user);
+    setEditMode('edit');
+    setIsEditModalOpen(true);
+  }, []);
+  
+  const handleDeleteClick = useCallback((user: UserRecord) => {
+    setSelectedUser(user);
+    setIsDeleteModalOpen(true);
+  }, []);
+  
+  const handleCreateClick = useCallback(() => {
+    setSelectedUser(null);
+    setEditMode('create');
+    setIsEditModalOpen(true);
+  }, []);
+  
+  const handleCloseModal = useCallback(() => {
+    setIsEditModalOpen(false);
+    setIsDeleteModalOpen(false);
+    setSelectedUser(null);
+  }, []);
+  
+  const handleSaveUser = useCallback(async (userData: UserFormData) => {
+    setIsLoading(true);
+    
+    try {
+      // Simular chamada de API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (editMode === 'create') {
+        // Simular criação de usuário
+        const newUser: UserRecord = {
+          ...userData,
+          id: `${mockUsersData.length + 1}`,
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(userData.name)}&background=6366f1&color=fff`,
+          joinedDate: new Date().toISOString().split('T')[0],
+          lastActive: new Date().toISOString().split('T')[0],
+          totalSpent: 0,
+          status: userData.isActive ? 'active' as ArtistStatus : 'inactive' as ArtistStatus,
+        };
+        
+        // Atualizar dados localmente
+        const updatedUsers = [...mockUsersData, newUser];
+        setFilteredUsers(updatedUsers);
+        
+        success('Usuário criado com sucesso', 'O novo usuário foi adicionado ao sistema');
+      } else {
+        // Simular atualização de usuário
+        const updatedUsers = mockUsersData.map(user => 
+          user.id === selectedUser?.id 
+            ? { 
+                ...user, 
+                name: userData.name,
+                email: userData.email,
+                plan: userData.plan,
+                paymentMethod: userData.paymentMethod,
+                phoneNumber: userData.phoneNumber,
+                status: userData.isActive ? 'active' as ArtistStatus : 'inactive' as ArtistStatus,
+                subscriptionStatus: userData.status,
+              } 
+            : user
+        );
+        
+        // Atualizar dados localmente
+        setFilteredUsers(updatedUsers);
+        
+        success('Usuário atualizado com sucesso', 'As alterações foram salvas');
+      }
+      
+      handleCloseModal();
+    } catch {
+      error('Erro ao salvar usuário', 'Tente novamente mais tarde');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [editMode, selectedUser, success, error, handleCloseModal]);
+  
+  const handleDeleteUser = useCallback(async () => {
+    if (!selectedUser) return;
+    
+    setIsLoading(true);
+    
+    try {
+      // Simular chamada de API
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Filtrar usuário excluído
+      const updatedUsers = mockUsersData.filter(user => user.id !== selectedUser.id);
+      setFilteredUsers(updatedUsers);
+      
+      success('Usuário excluído com sucesso', 'O usuário foi removido do sistema');
+      handleCloseModal();
+    } catch {
+      error('Erro ao excluir usuário', 'Tente novamente mais tarde');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedUser, success, error, handleCloseModal]);
+
+  // Mapear dados do usuário selecionado para o formato do formulário
+  const mapUserToFormData = useCallback((user: UserRecord | null): UserFormData | undefined => {
+    if (!user) return undefined;
+    
+    return {
+      id: user.id,
+      name: user.name as string,
+      email: user.email as string,
+      plan: user.plan,
+      paymentMethod: user.paymentMethod,
+      phoneNumber: user.phoneNumber || '',
+      isActive: user.status === 'active',
+      receiveNotifications: true, // Valor padrão
+      status: user.subscriptionStatus || 'active',
+    };
+  }, []);
 
   return (
-    <div>
-      {/* Cabeçalho da página */}
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Usuários</h1>
-        <p className="text-gray-600 mt-1">
-          Gerencie os usuários da plataforma EiMusic.
-        </p>
-      </div>
-
-      {/* Barra de filtros */}
+    <div className="space-y-6">
+      <PageHeader
+        title="Usuários"
+        description="Gerencie os usuários da plataforma"
+      >
+        <Button
+          variant="primary"
+          onClick={handleCreateClick}
+          leftIcon={<Plus size={16} />}
+        >
+          Novo Usuário
+        </Button>
+      </PageHeader>
+      
       <FilterBar
         filters={filters}
         onFilterChange={handleFilterChange}
         onSearchChange={handleSearchChange}
         onReset={handleResetFilters}
       />
-
-      {/* Tabela de usuários */}
+      
       <DataTable
         data={filteredUsers}
         columns={columns}
         onRowClick={handleRowClick}
+      />
+      
+      {/* Modal de Edição */}
+      <EditUserModal
+        isOpen={isEditModalOpen}
+        onClose={handleCloseModal}
+        onSave={handleSaveUser}
+        user={mapUserToFormData(selectedUser)}
+        loading={isLoading}
+        mode={editMode}
+      />
+      
+      {/* Modal de Confirmação de Exclusão */}
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        title="Excluir Usuário"
+        message={`Tem certeza que deseja excluir o usuário ${selectedUser?.name}? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        confirmVariant="danger"
+        onConfirm={handleDeleteUser}
+        onCancel={handleCloseModal}
       />
     </div>
   );
