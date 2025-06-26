@@ -51,8 +51,9 @@ export default function UsersPage() {
       type: 'date',
     },
   ];
+// app/admin/users/page.tsx - TRECHO DAS COLUNAS ATUALIZADO
 
-  // Configuração das colunas da tabela
+  // Configuração das colunas da tabela - ATUALIZADA com campos de pagamento
   const columns = [
     {
       key: 'name' as keyof UserRecord,
@@ -70,8 +71,12 @@ export default function UsersPage() {
             />
           </div>
           <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">{user.name}</div>
-            <div className="text-sm text-gray-500">{user.email}</div>
+            <div className="text-sm font-medium text-gray-900">
+              {user.name}
+            </div>
+            <div className="text-sm text-gray-500">
+              {user.email}
+            </div>
           </div>
         </div>
       ),
@@ -91,11 +96,11 @@ export default function UsersPage() {
             planText = 'Gratuito';
             break;
           case 'premium':
-            planClass = 'bg-purple-100 text-purple-800';
+            planClass = 'bg-blue-100 text-blue-800';
             planText = 'Premium';
             break;
           case 'vip':
-            planClass = 'bg-indigo-100 text-indigo-800';
+            planClass = 'bg-purple-100 text-purple-800';
             planText = 'VIP';
             break;
           default:
@@ -110,30 +115,48 @@ export default function UsersPage() {
         );
       },
     },
+    // NOVA COLUNA: Método de Pagamento
     {
-      key: 'joinedDate' as keyof UserRecord,
-      label: 'Data de Ingresso',
+      key: 'paymentMethod' as keyof UserRecord,
+      label: 'Método Pagamento',
       sortable: true,
-      render: (value: unknown) => {
-        const date = new Date(String(value));
-        return new Intl.DateTimeFormat('pt-MZ', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        }).format(date);
-      },
-    },
-    {
-      key: 'lastActive' as keyof UserRecord,
-      label: 'Última Atividade',
-      sortable: true,
-      render: (value: unknown) => {
-        const date = new Date(String(value));
-        return new Intl.DateTimeFormat('pt-MZ', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        }).format(date);
+      render: (value: unknown, user: UserRecord) => {
+        if (!value) return <span className="text-gray-400">-</span>;
+        
+        const method = String(value);
+        let methodClass = '';
+        let methodText = '';
+        
+        switch (method) {
+          case 'mpesa':
+            methodClass = 'bg-green-100 text-green-800';
+            methodText = 'M-Pesa';
+            break;
+          case 'visa':
+            methodClass = 'bg-blue-100 text-blue-800';
+            methodText = 'Visa/MC';
+            break;
+          case 'paypal':
+            methodClass = 'bg-yellow-100 text-yellow-800';
+            methodText = 'PayPal';
+            break;
+          default:
+            methodClass = 'bg-gray-100 text-gray-800';
+            methodText = method;
+        }
+        
+        return (
+          <div>
+            <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${methodClass}`}>
+              {methodText}
+            </span>
+            {user.phoneNumber && method === 'mpesa' && (
+              <div className="text-xs text-gray-500 mt-1">
+                {user.phoneNumber}
+              </div>
+            )}
+          </div>
+        );
       },
     },
     {
@@ -141,8 +164,81 @@ export default function UsersPage() {
       label: 'Total Gasto',
       sortable: true,
       render: (value: unknown) => (
-        <span>MT {Number(value).toLocaleString('pt-MZ')}</span>
+        <span className="text-green-600 font-medium">
+          MT {Number(value).toLocaleString('pt-MZ')}
+        </span>
       ),
+    },
+    // NOVA COLUNA: Status da Assinatura
+    {
+      key: 'subscriptionStatus' as keyof UserRecord,
+      label: 'Assinatura',
+      sortable: true,
+      render: (value: unknown) => {
+        const status = String(value);
+        let statusClass = '';
+        let statusText = '';
+        
+        switch (status) {
+          case 'active':
+            statusClass = 'bg-green-100 text-green-800';
+            statusText = 'Ativa';
+            break;
+          case 'expired':
+            statusClass = 'bg-yellow-100 text-yellow-800';
+            statusText = 'Expirada';
+            break;
+          case 'cancelled':
+            statusClass = 'bg-red-100 text-red-800';
+            statusText = 'Cancelada';
+            break;
+          default:
+            statusClass = 'bg-gray-100 text-gray-800';
+            statusText = status || 'N/A';
+        }
+        
+        return (
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+            {statusText}
+          </span>
+        );
+      },
+    },
+    // NOVA COLUNA: Último Pagamento
+    {
+      key: 'lastPaymentDate' as keyof UserRecord,
+      label: 'Último Pagamento',
+      sortable: true,
+      render: (value: unknown) => {
+        if (!value) return <span className="text-gray-400">-</span>;
+        
+        const date = new Date(String(value));
+        const now = new Date();
+        const diffTime = Math.abs(now.getTime() - date.getTime());
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        let timeAgo = '';
+        if (diffDays === 1) {
+          timeAgo = 'ontem';
+        } else if (diffDays < 7) {
+          timeAgo = `${diffDays} dias atrás`;
+        } else if (diffDays < 30) {
+          timeAgo = `${Math.floor(diffDays / 7)} semanas atrás`;
+        } else {
+          timeAgo = date.toLocaleDateString('pt-MZ');
+        }
+        
+        return (
+          <div>
+            <div className="text-sm text-gray-900">
+              {date.toLocaleDateString('pt-MZ')}
+            </div>
+            <div className="text-xs text-gray-500">
+              {timeAgo}
+            </div>
+          </div>
+        );
+      },
     },
     {
       key: 'status' as keyof UserRecord,

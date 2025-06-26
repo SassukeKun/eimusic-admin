@@ -1,10 +1,11 @@
 // data/artistsData.ts
 import { Artist } from '@/types/admin';
+import type { MonetizationPlan, PaymentMethod, ArtistStatus } from '@/types/modal';
 
 // Tipo estendido para satisfazer Record<string, unknown>
 export type ArtistRecord = Artist & Record<string, unknown>;
 
-// Dados mockados para artistas
+// Dados mockados para artistas - ATUALIZADOS com campos de pagamento
 export const mockArtistsData: ArtistRecord[] = [
   {
     id: '1',
@@ -16,8 +17,13 @@ export const mockArtistsData: ArtistRecord[] = [
     joinedDate: '2023-04-15',
     totalTracks: 24,
     totalRevenue: 85600, // 85.600 MT
-    status: 'active',
-    monetizationPlan: 'premium',
+    status: 'active' as ArtistStatus,
+    monetizationPlan: 'premium' as MonetizationPlan,
+    // CAMPOS DE PAGAMENTO
+    paymentMethod: 'mpesa' as PaymentMethod,
+    phoneNumber: '+258 84 123 4567',
+    lastPaymentDate: '2024-01-15',
+    totalEarnings: 125000, // 125.000 MT histórico
   },
   {
     id: '2',
@@ -29,8 +35,12 @@ export const mockArtistsData: ArtistRecord[] = [
     joinedDate: '2023-06-10',
     totalTracks: 18,
     totalRevenue: 43200, // 43.200 MT
-    status: 'active',
-    monetizationPlan: 'premium',
+    status: 'active' as ArtistStatus,
+    monetizationPlan: 'premium' as MonetizationPlan,
+    // CAMPOS DE PAGAMENTO
+    paymentMethod: 'visa' as PaymentMethod,
+    lastPaymentDate: '2024-01-20',
+    totalEarnings: 78500, // 78.500 MT histórico
   },
   {
     id: '3',
@@ -42,8 +52,13 @@ export const mockArtistsData: ArtistRecord[] = [
     joinedDate: '2023-05-22',
     totalTracks: 15,
     totalRevenue: 38750, // 38.750 MT
-    status: 'active',
-    monetizationPlan: 'basic',
+    status: 'active' as ArtistStatus,
+    monetizationPlan: 'basic' as MonetizationPlan,
+    // CAMPOS DE PAGAMENTO
+    paymentMethod: 'mpesa' as PaymentMethod,
+    phoneNumber: '+258 87 987 6543',
+    lastPaymentDate: '2024-01-10',
+    totalEarnings: 45200, // 45.200 MT histórico
   },
   {
     id: '4',
@@ -55,8 +70,12 @@ export const mockArtistsData: ArtistRecord[] = [
     joinedDate: '2023-08-05',
     totalTracks: 8,
     totalRevenue: 17500, // 17.500 MT
-    status: 'inactive',
-    monetizationPlan: 'basic',
+    status: 'inactive' as ArtistStatus,
+    monetizationPlan: 'basic' as MonetizationPlan,
+    // CAMPOS DE PAGAMENTO
+    paymentMethod: 'paypal' as PaymentMethod,
+    lastPaymentDate: '2023-12-20',
+    totalEarnings: 22000, // 22.000 MT histórico
   },
   {
     id: '5',
@@ -68,8 +87,13 @@ export const mockArtistsData: ArtistRecord[] = [
     joinedDate: '2023-07-12',
     totalTracks: 20,
     totalRevenue: 54300, // 54.300 MT
-    status: 'active',
-    monetizationPlan: 'premium',
+    status: 'active' as ArtistStatus,
+    monetizationPlan: 'premium' as MonetizationPlan,
+    // CAMPOS DE PAGAMENTO
+    paymentMethod: 'mpesa' as PaymentMethod,
+    phoneNumber: '+258 85 456 7890',
+    lastPaymentDate: '2024-01-25',
+    totalEarnings: 89600, // 89.600 MT histórico
   },
 ];
 

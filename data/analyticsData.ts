@@ -1,7 +1,39 @@
 // data/analyticsData.ts
 
+// Interfaces para dados de analytics
+export interface AnalyticsPeriod {
+  readonly totalUsers: number;
+  readonly newUsers: number;
+  readonly totalArtists: number;
+  readonly newArtists: number;
+  readonly totalPlays: number;
+  readonly totalRevenue: number;
+}
+
+export interface MonthlyData {
+  readonly month: string;
+  readonly users: number;
+  readonly artists: number;
+  readonly plays: number;
+  readonly revenue: number;
+}
+
+export interface AnalyticsData {
+  readonly currentPeriod: AnalyticsPeriod;
+  readonly previousPeriod: AnalyticsPeriod;
+  readonly monthlyData: MonthlyData[];
+}
+
+export interface StatsCard {
+  readonly title: string;
+  readonly value: number;
+  readonly change: number;
+  readonly icon: string;
+  readonly prefix?: string;
+}
+
 // Dados mockados para estatísticas de analytics
-export const mockAnalyticsData = {
+export const mockAnalyticsData: AnalyticsData = {
   currentPeriod: {
     totalUsers: 45850,
     newUsers: 1250,
@@ -36,7 +68,7 @@ export const calculateChange = (current: number, previous: number): number => {
 };
 
 // Função para gerar estatísticas para os cards
-export const generateStatsCards = () => {
+export const generateStatsCards = (): StatsCard[] => {
   const { currentPeriod, previousPeriod } = mockAnalyticsData;
   
   return [

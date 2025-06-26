@@ -1,3 +1,12 @@
+// types/admin.ts
+import type { 
+  MonetizationPlan, 
+  PaymentMethod, 
+  ArtistStatus, 
+  UserStatus, 
+  TransactionStatus 
+} from './modal';
+
 // Navigation types
 export interface NavItem {
   id: string;
@@ -18,7 +27,7 @@ export interface AdminUser {
   lastLogin: string;
 }
 
-// Artist types
+// Artist types - ATUALIZADO com campos de pagamento
 export interface Artist {
   id: string;
   name: string;
@@ -29,21 +38,31 @@ export interface Artist {
   joinedDate: string;
   totalTracks: number;
   totalRevenue: number;
-  status: 'active' | 'inactive' | 'suspended';
-  monetizationPlan: 'basic' | 'premium' | 'enterprise';
+  status: ArtistStatus;
+  monetizationPlan: MonetizationPlan;
+  // NOVOS CAMPOS DE PAGAMENTO
+  paymentMethod?: PaymentMethod;
+  phoneNumber?: string; // Para M-Pesa
+  lastPaymentDate?: string;
+  totalEarnings?: number; // Total ganho historicamente
 }
 
-// User types
+// User types - ATUALIZADO com campos de pagamento  
 export interface User {
   id: string;
   name: string;
   email: string;
   avatar?: string;
-  plan: 'free' | 'premium';
+  plan: MonetizationPlan;
   joinedDate: string;
   lastActive: string;
   totalSpent: number;
-  status: 'active' | 'inactive' | 'suspended';
+  status: ArtistStatus;
+  // NOVOS CAMPOS DE PAGAMENTO
+  paymentMethod?: PaymentMethod;
+  phoneNumber?: string; // Para M-Pesa
+  lastPaymentDate?: string;
+  subscriptionStatus?: UserStatus;
 }
 
 // Content types
@@ -74,7 +93,7 @@ export interface DashboardStats {
   };
 }
 
-// Table types - CORRIGIDO AQUI
+// Table types
 export interface TableColumn<T> {
   key: keyof T;
   label: string;
@@ -102,9 +121,8 @@ export interface FilterConfig {
   options?: FilterOption[];
 }
 
-
 // Interface para planos de monetização
-export interface MonetizationPlan {
+export interface MonetizationPlanInfo {
   id: string;
   name: string;
   price: number; // Valor em MT
@@ -114,7 +132,7 @@ export interface MonetizationPlan {
   status: 'active' | 'deprecated' | 'coming_soon';
 }
 
-// Interface para transações de receita
+// Interface para transações de receita - ATUALIZADA
 export interface RevenueTransaction {
   id: string;
   userId: string;
@@ -125,5 +143,9 @@ export interface RevenueTransaction {
   planId?: string;
   planName?: string;
   date: string;
-  status: 'completed' | 'pending' | 'failed' | 'refunded';
+  status: TransactionStatus;
+  // NOVOS CAMPOS DE PAGAMENTO
+  paymentMethod: PaymentMethod;
+  phoneNumber?: string; // Para M-Pesa
+  transactionFee?: number; // Taxa cobrada em MT
 }

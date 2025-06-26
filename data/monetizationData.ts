@@ -1,8 +1,9 @@
 // data/monetizationData.ts
-import { MonetizationPlan, RevenueTransaction } from '@/types/admin';
+import { MonetizationPlanInfo, RevenueTransaction } from '@/types/admin';
+import type { MonetizationPlan, PaymentMethod, TransactionStatus } from '@/types/modal';
 
 // Tipos estendidos para satisfazer Record<string, unknown>
-export type MonetizationPlanRecord = MonetizationPlan & Record<string, unknown>;
+export type MonetizationPlanRecord = MonetizationPlanInfo & Record<string, unknown>;
 export type RevenueTransactionRecord = RevenueTransaction & Record<string, unknown>;
 
 // Dados mockados para os planos de monetização
@@ -67,7 +68,10 @@ export const mockTransactionsData: RevenueTransactionRecord[] = [
     planId: '2',
     planName: 'Premium',
     date: '2023-08-15',
-    status: 'completed',
+    status: 'completed' as TransactionStatus,
+    paymentMethod: 'mpesa' as PaymentMethod,
+    phoneNumber: '+258 84 111 2222',
+    transactionFee: 1.99, // 1% taxa M-Pesa
   },
   {
     id: '2',
@@ -79,7 +83,9 @@ export const mockTransactionsData: RevenueTransactionRecord[] = [
     planId: '3',
     planName: 'VIP',
     date: '2023-08-14',
-    status: 'completed',
+    status: 'completed' as TransactionStatus,
+    paymentMethod: 'visa' as PaymentMethod,
+    transactionFee: 7.48, // 2.5% taxa Visa
   },
   {
     id: '3',
@@ -91,7 +97,10 @@ export const mockTransactionsData: RevenueTransactionRecord[] = [
     planId: '2',
     planName: 'Premium',
     date: '2023-08-13',
-    status: 'completed',
+    status: 'completed' as TransactionStatus,
+    paymentMethod: 'mpesa' as PaymentMethod,
+    phoneNumber: '+258 85 333 4444',
+    transactionFee: 1.99, // 1% taxa M-Pesa
   },
   {
     id: '4',
@@ -103,7 +112,9 @@ export const mockTransactionsData: RevenueTransactionRecord[] = [
     planId: '2',
     planName: 'Premium',
     date: '2023-08-12',
-    status: 'refunded',
+    status: 'refunded' as TransactionStatus,
+    paymentMethod: 'visa' as PaymentMethod,
+    transactionFee: -4.98, // 2.5% taxa Visa (reembolsada)
   },
   {
     id: '5',
@@ -115,7 +126,9 @@ export const mockTransactionsData: RevenueTransactionRecord[] = [
     planId: '2',
     planName: 'Premium',
     date: '2023-08-11',
-    status: 'pending',
+    status: 'pending' as TransactionStatus,
+    paymentMethod: 'paypal' as PaymentMethod,
+    transactionFee: 5.97, // 3% taxa PayPal
   },
 ];
 
