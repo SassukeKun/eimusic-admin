@@ -1,30 +1,29 @@
-// app/admin/content/tracks/page.tsx
+// app/admin/content/albums/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Edit, Trash2, Play, Pause } from 'lucide-react';
+import { Edit, Trash2, Disc3 } from 'lucide-react';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import DataTable from '@/components/admin/DataTable';
 import FilterBar from '@/components/admin/FilterBar';
 import { 
-  mockTracksData, 
-  filterTracks,
-  formatDuration,
-  type TrackRecord 
-} from '@/data/tracksData';
+  mockAlbumsData, 
+  filterAlbums,
+  formatAlbumDuration,
+  type AlbumRecord 
+} from '@/data/albumsData';
 import type { FilterConfig } from '@/types/admin';
 
-export default function TracksPage() {
-  const [filteredTracks, setFilteredTracks] = useState<TrackRecord[]>([]);
+export default function AlbumsPage() {
+  const [filteredAlbums, setFilteredAlbums] = useState<AlbumRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
 
-  // Inicializar as faixas filtradas com todas as faixas
+  // Inicializar os álbuns filtrados com todos os álbuns
   useEffect(() => {
-    setFilteredTracks(mockTracksData);
+    setFilteredAlbums(mockAlbumsData);
   }, []);
 
   // Configuração dos filtros
@@ -52,73 +51,59 @@ export default function TracksPage() {
       ],
     },
     {
-      key: 'uploadDate',
-      label: 'Data de Upload',
+      key: 'releaseDate',
+      label: 'Data de Lançamento',
       type: 'date',
     },
   ];
 
-  // Função para alternar a reprodução
-  const togglePlay = (trackId: string) => {
-    if (currentlyPlaying === trackId) {
-      setCurrentlyPlaying(null);
-    } else {
-      setCurrentlyPlaying(trackId);
-    }
-  };
-
   // Configuração das colunas da tabela
   const columns = [
     {
-      key: 'title' as keyof TrackRecord,
-      label: 'Faixa',
+      key: 'title' as keyof AlbumRecord,
+      label: 'Álbum',
       sortable: true,
-      render: (value: unknown, track: TrackRecord) => (
+      render: (value: unknown, album: AlbumRecord) => (
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10 relative">
             <Image
               className="h-10 w-10 rounded"
-              src={track.coverArt?.toString() || 'https://via.placeholder.com/40'}
-              alt={track.title?.toString() || 'Faixa'}
+              src={album.coverArt?.toString() || 'https://via.placeholder.com/40'}
+              alt={album.title?.toString() || 'Álbum'}
               width={40}
               height={40}
             />
-            <button 
-              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 rounded hover:bg-opacity-60"
-              onClick={(e) => {
-                e.stopPropagation();
-                togglePlay(track.id.toString());
-              }}
-              aria-label={currentlyPlaying === track.id ? "Pausar" : "Reproduzir"}
-            >
-              {currentlyPlaying === track.id ? (
-                <Pause className="h-5 w-5 text-white" />
-              ) : (
-                <Play className="h-5 w-5 text-white" />
-              )}
-            </button>
+            <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 rounded">
+              <Disc3 className="h-5 w-5 text-white" />
+            </div>
           </div>
           <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">{track.title}</div>
-            <div className="text-sm text-gray-500">{track.artistName}</div>
+            <div className="text-sm font-medium text-gray-900">{album.title}</div>
+            <div className="text-sm text-gray-500">{album.artistName}</div>
           </div>
         </div>
       ),
     },
     {
-      key: 'duration' as keyof TrackRecord,
-      label: 'Duração',
+      key: 'trackCount' as keyof AlbumRecord,
+      label: 'Faixas',
       sortable: true,
-      render: (value: unknown) => formatDuration(Number(value)),
+      render: (value: unknown) => Number(value).toLocaleString('pt-MZ'),
     },
     {
-      key: 'plays' as keyof TrackRecord,
+      key: 'totalDuration' as keyof AlbumRecord,
+      label: 'Duração',
+      sortable: true,
+      render: (value: unknown) => formatAlbumDuration(Number(value)),
+    },
+    {
+      key: 'plays' as keyof AlbumRecord,
       label: 'Reproduções',
       sortable: true,
       render: (value: unknown) => Number(value).toLocaleString('pt-MZ'),
     },
     {
-      key: 'revenue' as keyof TrackRecord,
+      key: 'revenue' as keyof AlbumRecord,
       label: 'Receita',
       sortable: true,
       render: (value: unknown) => (
@@ -126,8 +111,8 @@ export default function TracksPage() {
       ),
     },
     {
-      key: 'uploadDate' as keyof TrackRecord,
-      label: 'Data de Upload',
+      key: 'releaseDate' as keyof AlbumRecord,
+      label: 'Data de Lançamento',
       sortable: true,
       render: (value: unknown) => {
         const date = new Date(String(value));
@@ -139,7 +124,7 @@ export default function TracksPage() {
       },
     },
     {
-      key: 'status' as keyof TrackRecord,
+      key: 'status' as keyof AlbumRecord,
       label: 'Status',
       sortable: true,
       render: (value: unknown) => {
@@ -173,19 +158,19 @@ export default function TracksPage() {
       },
     },
     {
-      key: 'id' as keyof TrackRecord,
+      key: 'id' as keyof AlbumRecord,
       label: 'Ações',
       render: () => (
         <div className="flex space-x-2">
           <button 
             className="text-indigo-600 hover:text-indigo-900"
-            aria-label="Editar faixa"
+            aria-label="Editar álbum"
           >
             <Edit className="h-5 w-5" />
           </button>
           <button 
             className="text-red-600 hover:text-red-900"
-            aria-label="Excluir faixa"
+            aria-label="Excluir álbum"
           >
             <Trash2 className="h-5 w-5" />
           </button>
@@ -200,31 +185,31 @@ export default function TracksPage() {
     setActiveFilters(newFilters);
     
     // Aplicar filtros aos dados usando a função do arquivo de dados
-    const filtered = filterTracks(mockTracksData, newFilters, searchQuery);
-    setFilteredTracks(filtered);
+    const filtered = filterAlbums(mockAlbumsData, newFilters, searchQuery);
+    setFilteredAlbums(filtered);
   };
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     
     // Aplicar a nova pesquisa junto com os filtros existentes
-    const filtered = filterTracks(mockTracksData, activeFilters, query);
-    setFilteredTracks(filtered);
+    const filtered = filterAlbums(mockAlbumsData, activeFilters, query);
+    setFilteredAlbums(filtered);
   };
 
   const handleResetFilters = () => {
     setActiveFilters({});
     setSearchQuery('');
-    setFilteredTracks(mockTracksData);
+    setFilteredAlbums(mockAlbumsData);
   };
 
-  const handleRowClick = (track: TrackRecord) => {
-    console.log('Track clicked:', track);
+  const handleRowClick = (album: AlbumRecord) => {
+    console.log('Album clicked:', album);
     // Implementar a lógica de navegação ou exibição de detalhes aqui
   };
 
   return (
-   <div>
+    <div>
     {/* Cabeçalho da página com botão de volta */}
     <div className="mb-8">
       <div className="flex items-center mb-2">
@@ -236,9 +221,9 @@ export default function TracksPage() {
           Voltar para Conteúdo
         </Link>
       </div>
-      <h1 className="text-2xl font-bold text-gray-900">Faixas</h1>
+      <h1 className="text-2xl font-bold text-gray-900">Álbuns</h1>
       <p className="text-gray-600 mt-1">
-        Gerencie as faixas de música na plataforma EiMusic.
+        Gerencie os álbuns de música na plataforma EiMusic.
       </p>
     </div>
 
@@ -250,9 +235,9 @@ export default function TracksPage() {
         onReset={handleResetFilters}
       />
 
-      {/* Tabela de faixas */}
+      {/* Tabela de álbuns */}
       <DataTable
-        data={filteredTracks}
+        data={filteredAlbums}
         columns={columns}
         onRowClick={handleRowClick}
       />

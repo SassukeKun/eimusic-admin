@@ -149,3 +149,69 @@ export interface RevenueTransaction {
   phoneNumber?: string; // Para M-Pesa
   transactionFee?: number; // Taxa cobrada em MT
 }
+
+// Album types
+export interface Album {
+  id: string;
+  title: string;
+  artistId: string;
+  artistName: string;
+  trackCount: number;
+  totalDuration: number;
+  plays: number;
+  revenue: number;
+  releaseDate: string;
+  status: 'published' | 'draft' | 'removed';
+  coverArt?: string;
+}
+
+// Video types
+export interface Video {
+  id: string;
+  title: string;
+  artistId: string;
+  artistName: string;
+  duration: number;
+  views: number;
+  revenue: number;
+  uploadDate: string;
+  status: 'published' | 'draft' | 'removed';
+  thumbnailUrl?: string;
+}
+
+// Settings types
+export interface SystemSettings {
+  siteName: string;
+  siteDescription: string;
+  contactEmail: string;
+  supportPhone: string;
+  maintenanceMode: boolean;
+  allowNewRegistrations: boolean;
+  defaultLanguage: string;
+  defaultCurrency: string;
+}
+
+export interface NotificationSettings {
+  emailNotifications: boolean;
+  newArtistAlert: boolean;
+  newContentAlert: boolean;
+  revenueReports: boolean;
+  systemUpdates: boolean;
+  loginAlerts: boolean;
+}
+
+export interface MonetizationSettings {
+  defaultCommissionRate: number; // porcentagem
+  minimumPayoutAmount: number; // em MT
+  payoutSchedule: 'weekly' | 'biweekly' | 'monthly';
+  allowMicroDonations: boolean;
+  allowSubscriptions: boolean;
+}
+
+export interface InterfaceSettings {
+  theme: 'light' | 'dark' | 'system';
+  sidebarCollapsed: boolean;
+  itemsPerPage: number;
+  enableAnimations: boolean;
+  dashboardLayout: 'compact' | 'standard' | 'detailed';
+}

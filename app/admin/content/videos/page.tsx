@@ -1,30 +1,28 @@
-// app/admin/content/tracks/page.tsx
+// app/admin/content/videos/page.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Edit, Trash2, Play, Pause } from 'lucide-react';
-import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
+import { Edit, Trash2, PlayCircle } from 'lucide-react';
 import Image from 'next/image';
 import DataTable from '@/components/admin/DataTable';
 import FilterBar from '@/components/admin/FilterBar';
 import { 
-  mockTracksData, 
-  filterTracks,
+  mockVideosData, 
+  filterVideos,
   formatDuration,
-  type TrackRecord 
-} from '@/data/tracksData';
+  type VideoRecord 
+} from '@/data/videosData';
 import type { FilterConfig } from '@/types/admin';
 
-export default function TracksPage() {
-  const [filteredTracks, setFilteredTracks] = useState<TrackRecord[]>([]);
+export default function VideosPage() {
+  const [filteredVideos, setFilteredVideos] = useState<VideoRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
 
-  // Inicializar as faixas filtradas com todas as faixas
+  // Inicializar os vídeos filtrados com todos os vídeos
   useEffect(() => {
-    setFilteredTracks(mockTracksData);
+    setFilteredVideos(mockVideosData);
   }, []);
 
   // Configuração dos filtros
@@ -59,66 +57,62 @@ export default function TracksPage() {
   ];
 
   // Função para alternar a reprodução
-  const togglePlay = (trackId: string) => {
-    if (currentlyPlaying === trackId) {
+  const togglePlay = (videoId: string) => {
+    if (currentlyPlaying === videoId) {
       setCurrentlyPlaying(null);
     } else {
-      setCurrentlyPlaying(trackId);
+      setCurrentlyPlaying(videoId);
     }
   };
 
   // Configuração das colunas da tabela
   const columns = [
     {
-      key: 'title' as keyof TrackRecord,
-      label: 'Faixa',
+      key: 'title' as keyof VideoRecord,
+      label: 'Vídeo',
       sortable: true,
-      render: (value: unknown, track: TrackRecord) => (
+      render: (value: unknown, video: VideoRecord) => (
         <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-10 relative">
+          <div className="flex-shrink-0 h-10 w-16 relative">
             <Image
-              className="h-10 w-10 rounded"
-              src={track.coverArt?.toString() || 'https://via.placeholder.com/40'}
-              alt={track.title?.toString() || 'Faixa'}
-              width={40}
+              className="h-10 w-16 rounded object-cover"
+              src={video.thumbnailUrl?.toString() || 'https://via.placeholder.com/160x90'}
+              alt={video.title?.toString() || 'Vídeo'}
+              width={64}
               height={40}
             />
             <button 
               className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 rounded hover:bg-opacity-60"
               onClick={(e) => {
                 e.stopPropagation();
-                togglePlay(track.id.toString());
+                togglePlay(video.id.toString());
               }}
-              aria-label={currentlyPlaying === track.id ? "Pausar" : "Reproduzir"}
+              aria-label={currentlyPlaying === video.id ? "Pausar" : "Reproduzir"}
             >
-              {currentlyPlaying === track.id ? (
-                <Pause className="h-5 w-5 text-white" />
-              ) : (
-                <Play className="h-5 w-5 text-white" />
-              )}
+              <PlayCircle className="h-5 w-5 text-white" />
             </button>
           </div>
           <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">{track.title}</div>
-            <div className="text-sm text-gray-500">{track.artistName}</div>
+            <div className="text-sm font-medium text-gray-900">{video.title}</div>
+            <div className="text-sm text-gray-500">{video.artistName}</div>
           </div>
         </div>
       ),
     },
     {
-      key: 'duration' as keyof TrackRecord,
+      key: 'duration' as keyof VideoRecord,
       label: 'Duração',
       sortable: true,
       render: (value: unknown) => formatDuration(Number(value)),
     },
     {
-      key: 'plays' as keyof TrackRecord,
-      label: 'Reproduções',
+      key: 'views' as keyof VideoRecord,
+      label: 'Visualizações',
       sortable: true,
       render: (value: unknown) => Number(value).toLocaleString('pt-MZ'),
     },
     {
-      key: 'revenue' as keyof TrackRecord,
+      key: 'revenue' as keyof VideoRecord,
       label: 'Receita',
       sortable: true,
       render: (value: unknown) => (
@@ -126,7 +120,7 @@ export default function TracksPage() {
       ),
     },
     {
-      key: 'uploadDate' as keyof TrackRecord,
+      key: 'uploadDate' as keyof VideoRecord,
       label: 'Data de Upload',
       sortable: true,
       render: (value: unknown) => {
@@ -139,7 +133,7 @@ export default function TracksPage() {
       },
     },
     {
-      key: 'status' as keyof TrackRecord,
+      key: 'status' as keyof VideoRecord,
       label: 'Status',
       sortable: true,
       render: (value: unknown) => {
@@ -173,19 +167,19 @@ export default function TracksPage() {
       },
     },
     {
-      key: 'id' as keyof TrackRecord,
+      key: 'id' as keyof VideoRecord,
       label: 'Ações',
       render: () => (
         <div className="flex space-x-2">
           <button 
             className="text-indigo-600 hover:text-indigo-900"
-            aria-label="Editar faixa"
+            aria-label="Editar vídeo"
           >
             <Edit className="h-5 w-5" />
           </button>
           <button 
             className="text-red-600 hover:text-red-900"
-            aria-label="Excluir faixa"
+            aria-label="Excluir vídeo"
           >
             <Trash2 className="h-5 w-5" />
           </button>
@@ -200,47 +194,38 @@ export default function TracksPage() {
     setActiveFilters(newFilters);
     
     // Aplicar filtros aos dados usando a função do arquivo de dados
-    const filtered = filterTracks(mockTracksData, newFilters, searchQuery);
-    setFilteredTracks(filtered);
+    const filtered = filterVideos(mockVideosData, newFilters, searchQuery);
+    setFilteredVideos(filtered);
   };
 
   const handleSearchChange = (query: string) => {
     setSearchQuery(query);
     
     // Aplicar a nova pesquisa junto com os filtros existentes
-    const filtered = filterTracks(mockTracksData, activeFilters, query);
-    setFilteredTracks(filtered);
+    const filtered = filterVideos(mockVideosData, activeFilters, query);
+    setFilteredVideos(filtered);
   };
 
   const handleResetFilters = () => {
     setActiveFilters({});
     setSearchQuery('');
-    setFilteredTracks(mockTracksData);
+    setFilteredVideos(mockVideosData);
   };
 
-  const handleRowClick = (track: TrackRecord) => {
-    console.log('Track clicked:', track);
+  const handleRowClick = (video: VideoRecord) => {
+    console.log('Video clicked:', video);
     // Implementar a lógica de navegação ou exibição de detalhes aqui
   };
 
   return (
-   <div>
-    {/* Cabeçalho da página com botão de volta */}
-    <div className="mb-8">
-      <div className="flex items-center mb-2">
-        <Link 
-          href="/admin/content" 
-          className="inline-flex items-center mr-4 text-sm text-indigo-600 hover:text-indigo-800"
-        >
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Voltar para Conteúdo
-        </Link>
+    <div>
+      {/* Cabeçalho da página */}
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Vídeos</h1>
+        <p className="text-gray-600 mt-1">
+          Gerencie os vídeos de música na plataforma EiMusic.
+        </p>
       </div>
-      <h1 className="text-2xl font-bold text-gray-900">Faixas</h1>
-      <p className="text-gray-600 mt-1">
-        Gerencie as faixas de música na plataforma EiMusic.
-      </p>
-    </div>
 
       {/* Barra de filtros */}
       <FilterBar
@@ -250,9 +235,9 @@ export default function TracksPage() {
         onReset={handleResetFilters}
       />
 
-      {/* Tabela de faixas */}
+      {/* Tabela de vídeos */}
       <DataTable
-        data={filteredTracks}
+        data={filteredVideos}
         columns={columns}
         onRowClick={handleRowClick}
       />

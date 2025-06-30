@@ -1,40 +1,50 @@
 // components/admin/PageHeader.tsx
-'use client';
-
-import { ReactNode } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
+import Link from 'next/link';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 
 interface PageHeaderProps {
   title: string;
   description?: string;
-  children?: ReactNode;
+  backButton?: {
+    href: string;
+    label: string;
+  };
+  actions?: React.ReactNode;
 }
 
-export default function PageHeader({
-  title,
-  description,
-  children,
+export default function PageHeader({ 
+  title, 
+  description, 
+  backButton, 
+  actions 
 }: PageHeaderProps) {
   return (
-    <motion.div 
-      initial={{ opacity: 0, y: -10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      className="mb-8"
-    >
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+    <div className="mb-8">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">{title}</h1>
+          {backButton && (
+            <div className="mb-2">
+              <Link 
+                href={backButton.href} 
+                className="inline-flex items-center text-sm text-indigo-600 hover:text-indigo-800"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                {backButton.label}
+              </Link>
+            </div>
+          )}
+          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
           {description && (
-            <p className="text-muted mt-1">{description}</p>
+            <p className="text-gray-600 mt-1">{description}</p>
           )}
         </div>
-        {children && (
-          <div className="mt-4 md:mt-0 md:ml-4">
-            {children}
+        {actions && (
+          <div className="flex items-center space-x-3">
+            {actions}
           </div>
         )}
       </div>
-    </motion.div>
+    </div>
   );
 }
