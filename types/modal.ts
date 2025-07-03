@@ -27,6 +27,9 @@ export type UserStatus = 'active' | 'expired' | 'cancelled';
 // Status de transação
 export type TransactionStatus = 'completed' | 'pending' | 'failed' | 'refunded';
 
+// Status de conteúdo (faixas, álbuns, vídeos)
+export type ContentStatus = 'published' | 'draft' | 'removed';
+
 // Interface base para todos os modais
 export interface BaseModalProps {
   readonly isOpen: boolean;
@@ -120,6 +123,52 @@ export interface UserFormData {
   readonly status?: UserStatus;
 }
 
+// Props do Modal de edição de álbum
+export interface EditAlbumModalProps {
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  readonly onSave: (data: AlbumFormData) => void;
+  readonly album?: AlbumFormData;
+  readonly loading?: boolean;
+  readonly mode?: 'create' | 'edit';
+}
+
+// Interface para dados do formulário de álbum
+export interface AlbumFormData {
+  readonly id?: string;
+  readonly title: string;
+  readonly artistId: string;
+  readonly trackCount: number;
+  readonly totalDuration: number;
+  readonly status: ContentStatus;
+  readonly releaseDate: string;
+  readonly coverArt?: string;
+  readonly coverFile?: File;
+}
+
+// Props do Modal de edição de vídeo
+export interface EditVideoModalProps {
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  readonly onSave: (data: VideoFormData) => void;
+  readonly video?: VideoFormData;
+  readonly loading?: boolean;
+  readonly mode?: 'create' | 'edit';
+}
+
+// Interface para dados do formulário de vídeo
+export interface VideoFormData {
+  readonly id?: string;
+  readonly title: string;
+  readonly artistId: string;
+  readonly duration: number;
+  readonly status: ContentStatus;
+  readonly uploadDate: string;
+  readonly thumbnailUrl?: string;
+  readonly thumbnailFile?: File;
+  readonly videoUrl?: string;
+}
+
 // Context do sistema de modal
 export interface ModalContextValue {
   readonly openModals: readonly string[];
@@ -132,3 +181,4 @@ export interface ModalContextValue {
 export interface ModalProviderProps {
   readonly children: React.ReactNode;
 }
+

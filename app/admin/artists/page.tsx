@@ -27,6 +27,7 @@ export default function ArtistsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [artistToDelete, setArtistToDelete] = useState<ArtistRecord | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const itemsPerPage = 8; // Número de itens por página
 
   // Inicializar os artistas filtrados
   useEffect(() => {
@@ -283,6 +284,11 @@ export default function ArtistsPage() {
     setSearchQuery('');
   };
 
+  const handleRowClick = (artist: ArtistRecord) => {
+    // Pode ser usado para selecionar o artista e mostrar mais detalhes ou editar
+    handleEditClick(artist);
+  };
+
   const handleEditClick = (artist: ArtistRecord) => {
     setSelectedArtist(artist);
     setIsEditModalOpen(true);
@@ -370,6 +376,8 @@ export default function ArtistsPage() {
       <DataTable
         data={filteredArtists}
         columns={columns}
+        onRowClick={handleRowClick}
+        itemsPerPage={itemsPerPage}
       />
 
       {/* Modal de Edição */}

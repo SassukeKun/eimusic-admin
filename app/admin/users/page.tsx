@@ -29,6 +29,7 @@ export default function UsersPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [editMode, setEditMode] = useState<'create' | 'edit'>('edit');
+  const itemsPerPage = 10; // Número de itens por página
   
   const { success, error } = useToast();
 
@@ -486,6 +487,7 @@ export default function UsersPage() {
         data={filteredUsers}
         columns={columns}
         onRowClick={handleRowClick}
+        itemsPerPage={itemsPerPage}
       />
       
       {/* Modal de Edição */}

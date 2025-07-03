@@ -22,6 +22,10 @@ export default function MonetizationPage() {
   // Calcular estatísticas usando a função auxiliar
   const monetizationStats = useMemo(() => 
     calculateMonetizationStats(plansData), [plansData]);
+    
+  // Definir o número de itens por página para cada tabela
+  const plansPerPage = 5;
+  const transactionsPerPage = 10;
 
   // Configuração das colunas da tabela de planos
   const planColumns = [
@@ -273,6 +277,7 @@ export default function MonetizationPage() {
         <DataTable
           data={plansData}
           columns={planColumns}
+          itemsPerPage={plansPerPage}
         />
       </div>
 
@@ -282,6 +287,7 @@ export default function MonetizationPage() {
         <DataTable
           data={transactionsData}
           columns={transactionColumns}
+          itemsPerPage={transactionsPerPage}
         />
       </div>
     </div>

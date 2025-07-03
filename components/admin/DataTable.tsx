@@ -1,15 +1,16 @@
 // components/admin/DataTable.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { ChevronUp, ChevronDown } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function DataTable<T extends Record<string, unknown>>({
   data,
   columns,
   onSort,
   onRowClick,
+  itemsPerPage = 10,
 }: {
   data: T[];
   columns: Array<{
@@ -20,10 +21,21 @@ export default function DataTable<T extends Record<string, unknown>>({
   }>;
   onSort?: (key: keyof T) => void;
   onRowClick?: (item: T) => void;
+  itemsPerPage?: number;
 }) {
   const [sortField, setSortField] = useState<keyof T | null>(null);
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+
+  // Calcular o número total de páginas
+  const totalPages = Math.max(1, Math.ceil(data.length / itemsPerPage));
+
+  // Obter os dados da página atual
+  const currentData = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return data.slice(startIndex, startIndex + itemsPerPage);
+  }, [data, currentPage, itemsPerPage]);
 
   // Manipulador de ordenação
   const handleSort = (key: keyof T) => {
@@ -50,6 +62,39 @@ export default function DataTable<T extends Record<string, unknown>>({
       }
       onRowClick(item);
     }
+  };
+
+  // Manipuladores de paginação
+  const goToNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages));
+  };
+
+  const goToPrevPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 1));
+  };
+
+  const goToPage = (pageNumber: number) => {
+    setCurrentPage(Math.max(1, Math.min(pageNumber, totalPages)));
+  };
+
+  // Gerar array de páginas para navegação
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5; // Número máximo de botões de página visíveis
+    
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = startPage + maxVisiblePages - 1;
+    
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
   };
 
   // Se não houver dados, mostrar uma mensagem amigável
@@ -99,7 +144,7 @@ export default function DataTable<T extends Record<string, unknown>>({
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-border">
-            {data.map((row, index) => {
+            {currentData.map((row, index) => {
               const isSelected = 'id' in row && selectedRow === String(row.id);
               
               return (
@@ -133,25 +178,50 @@ export default function DataTable<T extends Record<string, unknown>>({
       </div>
       <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-border">
         <div className="text-sm text-muted">
-          Mostrando <span className="font-medium text-foreground">{data.length}</span> {data.length === 1 ? 'item' : 'itens'}
+          Mostrando <span className="font-medium text-foreground">{Math.min(itemsPerPage, currentData.length)}</span> de{' '}
+          <span className="font-medium text-foreground">{data.length}</span> {data.length === 1 ? 'item' : 'itens'}
         </div>
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="btn btn-secondary btn-sm"
-            disabled
+            onClick={goToPrevPage}
+            disabled={currentPage === 1}
+            className="px-2 py-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Página anterior"
           >
-            Anterior
+            <ChevronLeft className="size-4" />
           </button>
-          <span className="px-3 py-1 text-sm text-foreground bg-white border border-border rounded-md">
-            1
+          
+          {/* Botões de páginas */}
+          <div className="hidden sm:flex items-center gap-1">
+            {getPageNumbers().map(pageNum => (
+              <button
+                key={pageNum}
+                onClick={() => goToPage(pageNum)}
+                className={`px-3 py-1 text-sm font-medium rounded-md ${
+                  currentPage === pageNum
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-700 bg-white border border-gray-300 hover:bg-gray-50'
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+          </div>
+          
+          {/* Indicador de página em telas pequenas */}
+          <span className="sm:hidden px-3 py-1 text-sm text-foreground bg-white border border-gray-300 rounded-md">
+            {currentPage} / {totalPages}
           </span>
+          
           <button
             type="button"
-            className="btn btn-secondary btn-sm"
-            disabled
+            onClick={goToNextPage}
+            disabled={currentPage === totalPages}
+            className="px-2 py-1 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Próxima página"
           >
-            Próxima
+            <ChevronRight className="size-4" />
           </button>
         </div>
       </div>

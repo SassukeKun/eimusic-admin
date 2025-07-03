@@ -13,12 +13,27 @@ import {
   type VideoRecord 
 } from '@/data/videosData';
 import type { FilterConfig } from '@/types/admin';
+import { EditVideoModal, ConfirmModal } from '@/components/ui';
+import type { VideoFormData } from '@/types/modal';
+import { useToast } from '@/components/hooks/useToast';
 
 export default function VideosPage() {
   const [filteredVideos, setFilteredVideos] = useState<VideoRecord[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
+  const itemsPerPage = 5; // Número de itens por página
+  
+  // Estados para modal de edição
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentVideo, setCurrentVideo] = useState<VideoFormData | undefined>();
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit');
+  
+  // Estados para modal de confirmação
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [videoToDelete, setVideoToDelete] = useState<string | null>(null);
+  
+  const { success, error } = useToast();
 
   // Inicializar os vídeos filtrados com todos os vídeos
   useEffect(() => {
@@ -169,17 +184,25 @@ export default function VideosPage() {
     {
       key: 'id' as keyof VideoRecord,
       label: 'Ações',
-      render: () => (
+      render: (value: unknown, video: VideoRecord) => (
         <div className="flex space-x-2">
           <button 
             className="text-indigo-600 hover:text-indigo-900"
             aria-label="Editar vídeo"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditVideo(video);
+            }}
           >
             <Edit className="h-5 w-5" />
           </button>
           <button 
             className="text-red-600 hover:text-red-900"
             aria-label="Excluir vídeo"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDeleteClick(video.id.toString());
+            }}
           >
             <Trash2 className="h-5 w-5" />
           </button>
@@ -216,15 +239,110 @@ export default function VideosPage() {
     console.log('Video clicked:', video);
     // Implementar a lógica de navegação ou exibição de detalhes aqui
   };
+  
+  // Handlers para o modal de edição
+  const handleCreateVideo = () => {
+    setCurrentVideo(undefined);
+    setModalMode('create');
+    setIsModalOpen(true);
+  };
+  
+  const handleEditVideo = (video: VideoRecord) => {
+    // Converter o formato do vídeo para o formato do formulário
+    const videoFormData: VideoFormData = {
+      id: video.id.toString(),
+      title: video.title.toString(),
+      artistId: video.artistId.toString(),
+      duration: Number(video.duration),
+      status: video.status as 'published' | 'draft' | 'removed',
+      uploadDate: video.uploadDate.toString(),
+      thumbnailUrl: video.thumbnailUrl?.toString(),
+      videoUrl: '', // Preenchimento fictício, em uma aplicação real você buscaria esta informação
+    };
+    
+    setCurrentVideo(videoFormData);
+    setModalMode('edit');
+    setIsModalOpen(true);
+  };
+  
+  const handleSaveVideo = async (videoData: VideoFormData) => {
+    try {
+      // Simulando uma operação de salvamento
+      console.log('Salvando vídeo:', videoData);
+      
+      if (modalMode === 'create') {
+        // Simular criação - em uma aplicação real, isso seria uma chamada de API
+        const newVideo: VideoRecord = {
+          ...videoData,
+          id: String(Date.now()),
+          artistName: 'Nome do Artista', // Em uma aplicação real, você buscaria o nome do artista
+          views: 0,
+          revenue: 0,
+        };
+        
+        setFilteredVideos(prev => [newVideo, ...prev]);
+        success('Vídeo criado', 'O vídeo foi adicionado com sucesso');
+      } else {
+        // Simular atualização - em uma aplicação real, isso seria uma chamada de API
+        setFilteredVideos(prev => 
+          prev.map(video => 
+            video.id.toString() === videoData.id 
+              ? { ...video, ...videoData, artistName: 'Nome do Artista Atualizado' } 
+              : video
+          )
+        );
+        success('Vídeo atualizado', 'As alterações foram salvas com sucesso');
+      }
+      
+      // Fechar o modal
+      setIsModalOpen(false);
+      
+    } catch (err) {
+      console.error('Erro ao salvar vídeo:', err);
+      error('Erro ao salvar', 'Ocorreu um erro ao salvar o vídeo');
+    }
+  };
+  
+  // Handlers para o modal de confirmação de exclusão
+  const handleDeleteClick = (videoId: string) => {
+    setVideoToDelete(videoId);
+    setIsConfirmModalOpen(true);
+  };
+  
+  const handleConfirmDelete = () => {
+    if (!videoToDelete) return;
+    
+    try {
+      // Simular exclusão - em uma aplicação real, isso seria uma chamada de API
+      setFilteredVideos(prev => prev.filter(video => video.id.toString() !== videoToDelete));
+      success('Vídeo excluído', 'O vídeo foi removido com sucesso');
+    } catch (err) {
+      console.error('Erro ao excluir vídeo:', err);
+      error('Erro ao excluir', 'Ocorreu um erro ao excluir o vídeo');
+    } finally {
+      setIsConfirmModalOpen(false);
+      setVideoToDelete(null);
+    }
+  };
 
   return (
     <div>
       {/* Cabeçalho da página */}
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Vídeos</h1>
-        <p className="text-gray-600 mt-1">
-          Gerencie os vídeos de música na plataforma EiMusic.
-        </p>
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Vídeos</h1>
+            <p className="text-gray-600 mt-1">
+              Gerencie os vídeos de música na plataforma EiMusic.
+            </p>
+          </div>
+          <button
+            onClick={handleCreateVideo}
+            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+          >
+            Criar Vídeo
+          </button>
+        </div>
       </div>
 
       {/* Barra de filtros */}
@@ -240,6 +358,28 @@ export default function VideosPage() {
         data={filteredVideos}
         columns={columns}
         onRowClick={handleRowClick}
+        itemsPerPage={itemsPerPage}
+      />
+      
+      {/* Modal de edição de vídeo */}
+      <EditVideoModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSave={handleSaveVideo}
+        video={currentVideo}
+        mode={modalMode}
+      />
+      
+      {/* Modal de confirmação de exclusão */}
+      <ConfirmModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="Excluir Vídeo"
+        message="Tem certeza que deseja excluir este vídeo? Esta ação não pode ser desfeita."
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        variant="danger"
       />
     </div>
   );

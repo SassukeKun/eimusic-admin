@@ -3,11 +3,14 @@
 
 import { useState, useEffect } from 'react';
 import { Edit, Trash2, Play, Pause } from 'lucide-react';
+// import PageHeader from '@/components/admin/PageHeader';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
 import DataTable from '@/components/admin/DataTable';
 import FilterBar from '@/components/admin/FilterBar';
+import EditTrackModal from '@/components/ui/EditTrackModal';
+import type { TrackFormData } from '@/components/ui/EditTrackModal';
 import { 
   mockTracksData, 
   filterTracks,
@@ -21,6 +24,10 @@ export default function TracksPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState<TrackFormData | undefined>(undefined);
+  const [isLoading, setIsLoading] = useState(false);
+  const itemsPerPage = 5; // Número de itens por página
 
   // Inicializar as faixas filtradas com todas as faixas
   useEffect(() => {
@@ -65,6 +72,65 @@ export default function TracksPage() {
     } else {
       setCurrentlyPlaying(trackId);
     }
+  };
+
+  // Função para abrir o modal de edição
+  const handleEditTrack = (track: TrackRecord) => {
+    // Converter o TrackRecord para TrackFormData
+    const trackData: TrackFormData = {
+      id: track.id.toString(),
+      title: track.title.toString(),
+      artistId: track.artistId.toString(),
+      duration: Number(track.duration),
+      status: track.status as 'published' | 'draft' | 'removed',
+      coverArt: track.coverArt?.toString(),
+    };
+    
+    setSelectedTrack(trackData);
+    setIsEditModalOpen(true);
+  };
+
+  // Função para salvar alterações da faixa
+  const handleSaveTrack = async (data: TrackFormData) => {
+    setIsLoading(true);
+    
+    // Simular um atraso de API
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Em um ambiente real, aqui seria feito o upload do arquivo
+    // e a URL seria obtida do servidor após o upload
+    const coverArtUrl = data.coverArt;
+    
+    // Se houver um arquivo de imagem, em um ambiente real faríamos o upload
+    // e obteríamos a URL do servidor. Aqui apenas simulamos isso.
+    if (data.coverFile) {
+      console.log('Arquivo de imagem recebido:', data.coverFile.name);
+      // Em um ambiente real, aqui seria feito o upload do arquivo
+      // const uploadedUrl = await uploadImageToServer(data.coverFile);
+      // coverArtUrl = uploadedUrl;
+    }
+    
+    // Atualizar os dados mockados (em produção, isso seria uma chamada API)
+    const updatedTracks = mockTracksData.map(track => {
+      if (track.id === data.id) {
+        return {
+          ...track,
+          title: data.title,
+          artistId: data.artistId,
+          duration: data.duration,
+          status: data.status,
+          coverArt: coverArtUrl,
+        };
+      }
+      return track;
+    });
+    
+    // Atualizar os dados filtrados também
+    const updatedFilteredTracks = filterTracks(updatedTracks, activeFilters, searchQuery);
+    setFilteredTracks(updatedFilteredTracks);
+    
+    setIsLoading(false);
+    setIsEditModalOpen(false);
   };
 
   // Configuração das colunas da tabela
@@ -175,11 +241,15 @@ export default function TracksPage() {
     {
       key: 'id' as keyof TrackRecord,
       label: 'Ações',
-      render: () => (
+      render: (value: unknown, track: TrackRecord) => (
         <div className="flex space-x-2">
           <button 
             className="text-indigo-600 hover:text-indigo-900"
             aria-label="Editar faixa"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEditTrack(track);
+            }}
           >
             <Edit className="h-5 w-5" />
           </button>
@@ -251,10 +321,23 @@ export default function TracksPage() {
       />
 
       {/* Tabela de faixas */}
-      <DataTable
-        data={filteredTracks}
-        columns={columns}
-        onRowClick={handleRowClick}
+      <div className="mt-6">
+        <DataTable
+          data={filteredTracks}
+          columns={columns}
+          onRowClick={handleRowClick}
+          itemsPerPage={itemsPerPage}
+        />
+      </div>
+
+      {/* Modal de edição */}
+      <EditTrackModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSaveTrack}
+        track={selectedTrack}
+        loading={isLoading}
+        mode="edit"
       />
     </div>
   );
