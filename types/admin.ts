@@ -32,19 +32,37 @@ export interface Artist {
   id: string;
   name: string;
   email: string;
+  phone?: string;
+  bio?: string;
+  genre?: string;
+  country?: string;
+  city?: string;
+  status: 'active' | 'pending' | 'inactive';
+  joinDate: string;
+  totalTracks?: number;
+  totalAlbums?: number;
+  totalVideos?: number;
+  totalPlays?: number;
+  totalRevenue?: number;
+  avatarUrl?: string;
+  bannerUrl?: string;
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+    youtube?: string;
+    spotify?: string;
+    website?: string;
+  };
   profileImage?: string;
-  genre: string;
   verified: boolean;
   joinedDate: string;
-  totalTracks: number;
-  totalRevenue: number;
-  status: ArtistStatus;
+  totalEarnings?: number; // Total ganho historicamente
   monetizationPlan: MonetizationPlan;
   // NOVOS CAMPOS DE PAGAMENTO
   paymentMethod?: PaymentMethod;
   phoneNumber?: string; // Para M-Pesa
   lastPaymentDate?: string;
-  totalEarnings?: number; // Total ganho historicamente
 }
 
 // User types - ATUALIZADO com campos de pagamento  
@@ -52,17 +70,24 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  role: 'admin' | 'artist' | 'user';
+  status: 'active' | 'pending' | 'banned';
+  createdAt: string;
+  lastLogin?: string;
+  avatarUrl?: string;
+  country?: string;
+  city?: string;
+  phone?: string;
   avatar?: string;
   plan: MonetizationPlan;
   joinedDate: string;
   lastActive: string;
   totalSpent: number;
-  status: ArtistStatus;
+  subscriptionStatus?: UserStatus;
   // NOVOS CAMPOS DE PAGAMENTO
   paymentMethod?: PaymentMethod;
   phoneNumber?: string; // Para M-Pesa
   lastPaymentDate?: string;
-  subscriptionStatus?: UserStatus;
 }
 
 // Content types
@@ -71,12 +96,18 @@ export interface Track {
   title: string;
   artistId: string;
   artistName: string;
+  albumId?: string;
+  albumTitle?: string;
   duration: number;
   plays: number;
   revenue: number;
-  uploadDate: string;
+  releaseDate: string;
   status: 'published' | 'draft' | 'removed';
   coverArt?: string;
+  audioUrl?: string;
+  genre?: string;
+  isrc?: string;
+  lyrics?: string;
 }
 
 // Stats types
@@ -214,4 +245,60 @@ export interface InterfaceSettings {
   itemsPerPage: number;
   enableAnimations: boolean;
   dashboardLayout: 'compact' | 'standard' | 'detailed';
+}
+
+/**
+ * Representa uma estatística de análise
+ */
+export interface AnalyticsStat {
+  label: string;
+  value: number;
+  change: number;
+  trend: 'up' | 'down' | 'neutral';
+}
+
+/**
+ * Representa um ponto de dados para gráficos
+ */
+export interface DataPoint {
+  date: string;
+  value: number;
+}
+
+/**
+ * Representa uma série de dados para gráficos
+ */
+export interface DataSeries {
+  name: string;
+  data: DataPoint[];
+}
+
+/**
+ * Representa dados de monetização
+ */
+export interface MonetizationData {
+  totalRevenue: number;
+  pendingPayouts: number;
+  completedPayouts: number;
+  revenueByPlatform: {
+    platform: string;
+    amount: number;
+    percentage: number;
+  }[];
+  revenueHistory: DataPoint[];
+}
+
+/**
+ * Representa um pagamento
+ */
+export interface Payment {
+  id: string;
+  artistId: string;
+  artistName: string;
+  amount: number;
+  currency: string;
+  status: 'pending' | 'completed' | 'failed';
+  date: string;
+  method: string;
+  reference?: string;
 }

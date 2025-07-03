@@ -1,386 +1,265 @@
 // app/admin/content/videos/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Edit, Trash2, PlayCircle } from 'lucide-react';
-import Image from 'next/image';
+import { useState } from 'react';
+import { useVideos } from '@/hooks/useVideos';
+import { useArtists } from '@/hooks/useArtists';
+import { Video } from '@/types/admin';
+import { VideoFormData } from '@/types/modal';
+
+import PageHeader from '@/components/admin/PageHeader';
 import DataTable from '@/components/admin/DataTable';
 import FilterBar from '@/components/admin/FilterBar';
-import { 
-  mockVideosData, 
-  filterVideos,
-  formatDuration,
-  type VideoRecord 
-} from '@/data/videosData';
-import type { FilterConfig } from '@/types/admin';
-import { EditVideoModal, ConfirmModal } from '@/components/ui';
-import type { VideoFormData } from '@/types/modal';
-import { useToast } from '@/components/hooks/useToast';
+import SearchBar from '@/components/admin/SearchBar';
+import Button from '@/components/admin/Button';
+import EmptyState from '@/components/admin/EmptyState';
+import Skeleton from '@/components/admin/Skeleton';
+import EditVideoModal from '@/components/ui/EditVideoModal';
+import ConfirmationModal from '@/components/admin/ConfirmationModal';
 
 export default function VideosPage() {
-  const [filteredVideos, setFilteredVideos] = useState<VideoRecord[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
-  const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null);
-  const itemsPerPage = 5; // Número de itens por página
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<Video | null>(null);
+  const { artists } = useArtists();
   
-  // Estados para modal de edição
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentVideo, setCurrentVideo] = useState<VideoFormData | undefined>();
-  const [modalMode, setModalMode] = useState<'create' | 'edit'>('edit');
-  
-  // Estados para modal de confirmação
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [videoToDelete, setVideoToDelete] = useState<string | null>(null);
-  
-  const { success, error } = useToast();
+  const { 
+    videos, 
+    isLoading, 
+    error, 
+    filters,
+    searchQuery,
+    loadVideos,
+    createVideo,
+    updateVideo,
+    deleteVideo,
+    updateFilters,
+    resetFilters,
+    updateSearch
+  } = useVideos();
 
-  // Inicializar os vídeos filtrados com todos os vídeos
-  useEffect(() => {
-    setFilteredVideos(mockVideosData);
-  }, []);
+  const handleCreateVideo = () => {
+    setSelectedVideo(null);
+    setIsEditModalOpen(true);
+  };
 
-  // Configuração dos filtros
-  const filters: FilterConfig[] = [
+  const handleEditVideo = (video: Video) => {
+    setSelectedVideo(video);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteClick = (video: Video) => {
+    setSelectedVideo(video);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (selectedVideo) {
+      await deleteVideo(selectedVideo.id);
+      setIsDeleteModalOpen(false);
+    }
+  };
+
+  const handleSaveVideo = async (formData: VideoFormData) => {
+    if (selectedVideo) {
+      await updateVideo(selectedVideo.id, formData);
+    } else {
+      await createVideo(formData);
+    }
+    setIsEditModalOpen(false);
+  };
+
+  const formatDuration = (seconds: number): string => {
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+
+  const columns = [
     {
-      key: 'status',
-      label: 'Status',
-      type: 'select',
-      options: [
-        { value: 'published', label: 'Publicado' },
-        { value: 'draft', label: 'Rascunho' },
-        { value: 'removed', label: 'Removido' },
-      ],
+      key: 'thumbnailUrl',
+      label: 'Thumbnail',
+      render: (value: string | undefined, video: Video) => (
+        <div className="w-24 h-14 rounded overflow-hidden">
+          {value ? (
+            <img 
+              src={value} 
+              alt={`Thumbnail do vídeo ${video.title}`} 
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
+              <span className="text-xs">Sem thumbnail</span>
+            </div>
+          )}
+        </div>
+      )
     },
     {
-      key: 'artistId',
+      key: 'title',
+      label: 'Título',
+      sortable: true
+    },
+    {
+      key: 'artistName',
       label: 'Artista',
-      type: 'select',
-      options: [
-        { value: '1', label: 'Lizha James' },
-        { value: '2', label: 'MC Roger' },
-        { value: '3', label: 'Valter Artístico' },
-        { value: '4', label: 'Marllen' },
-        { value: '5', label: 'Ziqo' },
-      ],
+      sortable: true
+    },
+    {
+      key: 'duration',
+      label: 'Duração',
+      sortable: true,
+      render: (value: number) => formatDuration(value)
     },
     {
       key: 'uploadDate',
       label: 'Data de Upload',
-      type: 'date',
-    },
-  ];
-
-  // Função para alternar a reprodução
-  const togglePlay = (videoId: string) => {
-    if (currentlyPlaying === videoId) {
-      setCurrentlyPlaying(null);
-    } else {
-      setCurrentlyPlaying(videoId);
-    }
-  };
-
-  // Configuração das colunas da tabela
-  const columns = [
-    {
-      key: 'title' as keyof VideoRecord,
-      label: 'Vídeo',
       sortable: true,
-      render: (value: unknown, video: VideoRecord) => (
-        <div className="flex items-center">
-          <div className="flex-shrink-0 h-10 w-16 relative">
-            <Image
-              className="h-10 w-16 rounded object-cover"
-              src={video.thumbnailUrl?.toString() || 'https://via.placeholder.com/160x90'}
-              alt={video.title?.toString() || 'Vídeo'}
-              width={64}
-              height={40}
-            />
-            <button 
-              className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 rounded hover:bg-opacity-60"
-              onClick={(e) => {
-                e.stopPropagation();
-                togglePlay(video.id.toString());
-              }}
-              aria-label={currentlyPlaying === video.id ? "Pausar" : "Reproduzir"}
-            >
-              <PlayCircle className="h-5 w-5 text-white" />
-            </button>
-          </div>
-          <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900">{video.title}</div>
-            <div className="text-sm text-gray-500">{video.artistName}</div>
-          </div>
-        </div>
-      ),
+      render: (value: string) => new Date(value).toLocaleDateString()
     },
     {
-      key: 'duration' as keyof VideoRecord,
-      label: 'Duração',
-      sortable: true,
-      render: (value: unknown) => formatDuration(Number(value)),
-    },
-    {
-      key: 'views' as keyof VideoRecord,
+      key: 'views',
       label: 'Visualizações',
       sortable: true,
-      render: (value: unknown) => Number(value).toLocaleString('pt-MZ'),
+      render: (value: number) => value.toLocaleString()
     },
     {
-      key: 'revenue' as keyof VideoRecord,
-      label: 'Receita',
-      sortable: true,
-      render: (value: unknown) => (
-        <span>MT {Number(value).toLocaleString('pt-MZ')}</span>
-      ),
-    },
-    {
-      key: 'uploadDate' as keyof VideoRecord,
-      label: 'Data de Upload',
-      sortable: true,
-      render: (value: unknown) => {
-        const date = new Date(String(value));
-        return new Intl.DateTimeFormat('pt-MZ', {
-          year: 'numeric',
-          month: 'short',
-          day: 'numeric'
-        }).format(date);
-      },
-    },
-    {
-      key: 'status' as keyof VideoRecord,
+      key: 'status',
       label: 'Status',
       sortable: true,
-      render: (value: unknown) => {
-        const status = String(value);
-        let statusClass = '';
-        let statusText = '';
-        
-        switch (status) {
-          case 'published':
-            statusClass = 'bg-green-100 text-green-800';
-            statusText = 'Publicado';
-            break;
-          case 'draft':
-            statusClass = 'bg-yellow-100 text-yellow-800';
-            statusText = 'Rascunho';
-            break;
-          case 'removed':
-            statusClass = 'bg-red-100 text-red-800';
-            statusText = 'Removido';
-            break;
-          default:
-            statusClass = 'bg-gray-100 text-gray-800';
-            statusText = status;
-        }
-        
-        return (
-          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
-            {statusText}
-          </span>
-        );
-      },
-    },
-    {
-      key: 'id' as keyof VideoRecord,
-      label: 'Ações',
-      render: (value: unknown, video: VideoRecord) => (
-        <div className="flex space-x-2">
-          <button 
-            className="text-indigo-600 hover:text-indigo-900"
-            aria-label="Editar vídeo"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEditVideo(video);
-            }}
-          >
-            <Edit className="h-5 w-5" />
-          </button>
-          <button 
-            className="text-red-600 hover:text-red-900"
-            aria-label="Excluir vídeo"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteClick(video.id.toString());
-            }}
-          >
-            <Trash2 className="h-5 w-5" />
-          </button>
-        </div>
-      ),
-    },
-  ];
-
-  // Manipuladores de eventos
-  const handleFilterChange = (filterKey: string, value: string) => {
-    const newFilters = { ...activeFilters, [filterKey]: value };
-    setActiveFilters(newFilters);
-    
-    // Aplicar filtros aos dados usando a função do arquivo de dados
-    const filtered = filterVideos(mockVideosData, newFilters, searchQuery);
-    setFilteredVideos(filtered);
-  };
-
-  const handleSearchChange = (query: string) => {
-    setSearchQuery(query);
-    
-    // Aplicar a nova pesquisa junto com os filtros existentes
-    const filtered = filterVideos(mockVideosData, activeFilters, query);
-    setFilteredVideos(filtered);
-  };
-
-  const handleResetFilters = () => {
-    setActiveFilters({});
-    setSearchQuery('');
-    setFilteredVideos(mockVideosData);
-  };
-
-  const handleRowClick = (video: VideoRecord) => {
-    console.log('Video clicked:', video);
-    // Implementar a lógica de navegação ou exibição de detalhes aqui
-  };
-  
-  // Handlers para o modal de edição
-  const handleCreateVideo = () => {
-    setCurrentVideo(undefined);
-    setModalMode('create');
-    setIsModalOpen(true);
-  };
-  
-  const handleEditVideo = (video: VideoRecord) => {
-    // Converter o formato do vídeo para o formato do formulário
-    const videoFormData: VideoFormData = {
-      id: video.id.toString(),
-      title: video.title.toString(),
-      artistId: video.artistId.toString(),
-      duration: Number(video.duration),
-      status: video.status as 'published' | 'draft' | 'removed',
-      uploadDate: video.uploadDate.toString(),
-      thumbnailUrl: video.thumbnailUrl?.toString(),
-      videoUrl: '', // Preenchimento fictício, em uma aplicação real você buscaria esta informação
-    };
-    
-    setCurrentVideo(videoFormData);
-    setModalMode('edit');
-    setIsModalOpen(true);
-  };
-  
-  const handleSaveVideo = async (videoData: VideoFormData) => {
-    try {
-      // Simulando uma operação de salvamento
-      console.log('Salvando vídeo:', videoData);
-      
-      if (modalMode === 'create') {
-        // Simular criação - em uma aplicação real, isso seria uma chamada de API
-        const newVideo: VideoRecord = {
-          ...videoData,
-          id: String(Date.now()),
-          artistName: 'Nome do Artista', // Em uma aplicação real, você buscaria o nome do artista
-          views: 0,
-          revenue: 0,
+      render: (value: string) => {
+        const statusMap: Record<string, { label: string, className: string }> = {
+          published: { label: 'Publicado', className: 'bg-green-100 text-green-800' },
+          draft: { label: 'Rascunho', className: 'bg-gray-100 text-gray-800' },
+          removed: { label: 'Removido', className: 'bg-red-100 text-red-800' }
         };
         
-        setFilteredVideos(prev => [newVideo, ...prev]);
-        success('Vídeo criado', 'O vídeo foi adicionado com sucesso');
-      } else {
-        // Simular atualização - em uma aplicação real, isso seria uma chamada de API
-        setFilteredVideos(prev => 
-          prev.map(video => 
-            video.id.toString() === videoData.id 
-              ? { ...video, ...videoData, artistName: 'Nome do Artista Atualizado' } 
-              : video
-          )
+        const status = statusMap[value] || { label: value, className: 'bg-gray-100 text-gray-800' };
+        
+        return (
+          <span className={`px-2 py-1 rounded-full text-xs font-medium ${status.className}`}>
+            {status.label}
+          </span>
         );
-        success('Vídeo atualizado', 'As alterações foram salvas com sucesso');
       }
-      
-      // Fechar o modal
-      setIsModalOpen(false);
-      
-    } catch (err) {
-      console.error('Erro ao salvar vídeo:', err);
-      error('Erro ao salvar', 'Ocorreu um erro ao salvar o vídeo');
+    },
+    {
+      key: 'actions',
+      label: 'Ações',
+      render: (_: any, video: Video) => (
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => handleEditVideo(video)}
+          >
+            Editar
+          </Button>
+          <Button 
+            variant="danger" 
+            size="sm" 
+            onClick={() => handleDeleteClick(video)}
+          >
+            Excluir
+          </Button>
+        </div>
+      )
     }
-  };
-  
-  // Handlers para o modal de confirmação de exclusão
-  const handleDeleteClick = (videoId: string) => {
-    setVideoToDelete(videoId);
-    setIsConfirmModalOpen(true);
-  };
-  
-  const handleConfirmDelete = () => {
-    if (!videoToDelete) return;
-    
-    try {
-      // Simular exclusão - em uma aplicação real, isso seria uma chamada de API
-      setFilteredVideos(prev => prev.filter(video => video.id.toString() !== videoToDelete));
-      success('Vídeo excluído', 'O vídeo foi removido com sucesso');
-    } catch (err) {
-      console.error('Erro ao excluir vídeo:', err);
-      error('Erro ao excluir', 'Ocorreu um erro ao excluir o vídeo');
-    } finally {
-      setIsConfirmModalOpen(false);
-      setVideoToDelete(null);
+  ];
+
+  const filterOptions = [
+    {
+      key: 'status',
+      label: 'Status',
+      options: [
+        { value: '', label: 'Todos' },
+        { value: 'published', label: 'Publicado' },
+        { value: 'draft', label: 'Rascunho' },
+        { value: 'removed', label: 'Removido' }
+      ]
+    },
+    {
+      key: 'artist_id',
+      label: 'Artista',
+      options: [
+        { value: '', label: 'Todos' },
+        ...(artists || []).map(artist => ({
+          value: artist.id,
+          label: artist.name
+        }))
+      ]
     }
-  };
+  ];
 
   return (
-    <div>
-      {/* Cabeçalho da página */}
-      <div className="mb-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Vídeos</h1>
-            <p className="text-gray-600 mt-1">
-              Gerencie os vídeos de música na plataforma EiMusic.
-            </p>
-          </div>
-          <button
-            onClick={handleCreateVideo}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-          >
-            Criar Vídeo
-          </button>
-        </div>
+    <div className="space-y-6">
+      <PageHeader 
+        title="Vídeos" 
+        description="Gerencie os vídeos disponíveis na plataforma."
+        actions={
+          <Button onClick={handleCreateVideo}>
+            Adicionar Vídeo
+          </Button>
+        }
+      />
+
+      <div className="flex items-center justify-between">
+        <SearchBar 
+          placeholder="Buscar por título ou artista" 
+          value={searchQuery}
+          onChange={updateSearch}
+        />
+        <FilterBar 
+          filters={filterOptions} 
+          activeFilters={filters}
+          onFilterChange={updateFilters}
+          onReset={resetFilters}
+        />
       </div>
 
-      {/* Barra de filtros */}
-      <FilterBar
-        filters={filters}
-        onFilterChange={handleFilterChange}
-        onSearchChange={handleSearchChange}
-        onReset={handleResetFilters}
-      />
+      {isLoading ? (
+        <Skeleton rows={5} />
+      ) : error ? (
+        <div className="bg-red-50 p-4 rounded-md text-red-700">
+          Erro ao carregar vídeos. Por favor, tente novamente.
+        </div>
+      ) : videos.length === 0 ? (
+        <EmptyState 
+          title="Nenhum vídeo encontrado" 
+          description="Comece adicionando um novo vídeo à plataforma."
+          action={
+            <Button onClick={handleCreateVideo}>
+              Adicionar Vídeo
+            </Button>
+          }
+        />
+      ) : (
+        <DataTable 
+          data={videos}
+          columns={columns}
+          onRowClick={handleEditVideo}
+        />
+      )}
 
-      {/* Tabela de vídeos */}
-      <DataTable
-        data={filteredVideos}
-        columns={columns}
-        onRowClick={handleRowClick}
-        itemsPerPage={itemsPerPage}
-      />
-      
-      {/* Modal de edição de vídeo */}
-      <EditVideoModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSave={handleSaveVideo}
-        video={currentVideo}
-        mode={modalMode}
-      />
-      
-      {/* Modal de confirmação de exclusão */}
-      <ConfirmModal
-        isOpen={isConfirmModalOpen}
-        onClose={() => setIsConfirmModalOpen(false)}
-        onConfirm={handleConfirmDelete}
-        title="Excluir Vídeo"
-        message="Tem certeza que deseja excluir este vídeo? Esta ação não pode ser desfeita."
-        confirmLabel="Excluir"
-        cancelLabel="Cancelar"
-        variant="danger"
-      />
+      {isEditModalOpen && (
+        <EditVideoModal
+          video={selectedVideo}
+          artists={artists || []}
+          onSave={handleSaveVideo}
+          onCancel={() => setIsEditModalOpen(false)}
+        />
+      )}
+
+      {isDeleteModalOpen && selectedVideo && (
+        <ConfirmationModal
+          title="Excluir Vídeo"
+          message={`Tem certeza que deseja excluir o vídeo "${selectedVideo.title}"? Esta ação não pode ser desfeita.`}
+          confirmLabel="Excluir"
+          cancelLabel="Cancelar"
+          onConfirm={handleDeleteConfirm}
+          onCancel={() => setIsDeleteModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

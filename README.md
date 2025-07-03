@@ -1,36 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EI Music Admin
 
-## Getting Started
+Painel administrativo para a plataforma EI Music, uma plataforma de distribuição e monetização de conteúdo audiovisual para Moçambique.
 
-First, run the development server:
+## Tecnologias
 
+- **Next.js** (App Router)
+- **React**
+- **TypeScript**
+- **Tailwind CSS**
+- **Supabase** (Banco de dados)
+- **Cloudinary** (Armazenamento de mídia)
+
+## Requisitos
+
+- Node.js 18.x ou superior
+- npm 8.x ou superior
+
+## Configuração do Ambiente
+
+1. Clone o repositório:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone https://github.com/seu-usuario/eimusic-admin.git
+cd eimusic-admin
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Instale as dependências:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Crie um arquivo `.env.local` na raiz do projeto com as seguintes variáveis:
+```
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=sua_url_do_supabase
+NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anon_do_supabase
+SUPABASE_SERVICE_ROLE_KEY=sua_chave_de_servico_do_supabase
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Cloudinary
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=seu_cloud_name
+CLOUDINARY_API_KEY=sua_api_key
+CLOUDINARY_API_SECRET=seu_api_secret
+```
 
-## Learn More
+4. Inicie o servidor de desenvolvimento:
+```bash
+npm run dev
+```
 
-To learn more about Next.js, take a look at the following resources:
+5. Acesse o painel em [http://localhost:3000](http://localhost:3000)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Estrutura do Projeto
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `app/` - Páginas e rotas da aplicação (Next.js App Router)
+- `components/` - Componentes reutilizáveis
+- `hooks/` - Hooks personalizados
+- `lib/` - Bibliotecas e utilitários
+- `services/` - Serviços para comunicação com APIs externas
+- `types/` - Definições de tipos TypeScript
+- `public/` - Arquivos estáticos
 
-## Deploy on Vercel
+## Configuração do Banco de Dados
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Supabase
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Crie uma conta no [Supabase](https://supabase.com/)
+2. Crie um novo projeto
+3. Obtenha as credenciais (URL e chaves) nas configurações do projeto
+4. Configure as tabelas conforme a estrutura definida em `types/database.ts`
+
+### Cloudinary
+
+1. Crie uma conta no [Cloudinary](https://cloudinary.com/)
+2. Obtenha as credenciais (cloud name, API key, API secret) no dashboard
+3. Configure as variáveis de ambiente conforme descrito acima
+
+## Desenvolvimento
+
+### Comandos
+
+- `npm run dev` - Inicia o servidor de desenvolvimento
+- `npm run build` - Compila o projeto para produção
+- `npm start` - Inicia o servidor de produção
+- `npm run lint` - Executa a verificação de linting
+
+### Integração com a Plataforma Principal
+
+Este painel administrativo compartilha o mesmo banco de dados da aplicação principal EI Music. Todas as alterações feitas aqui afetarão diretamente a plataforma principal.
+
+## Licença
+
+Todos os direitos reservados.

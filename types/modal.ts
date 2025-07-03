@@ -13,16 +13,16 @@ export type ModalPosition = 'center' | 'top' | 'bottom';
 export type ModalVariant = 'default' | 'danger' | 'success' | 'warning';
 
 // Planos de monetização disponíveis
-export type MonetizationPlan = 'basic' | 'premium' | 'enterprise';
+export type MonetizationPlan = 'free' | 'basic' | 'premium' | 'pro';
 
 // Métodos de pagamento disponíveis
-export type PaymentMethod = 'mpesa' | 'visa' | 'paypal';
+export type PaymentMethod = 'mpesa' | 'bank_transfer' | 'card' | 'cash';
 
 // Status de artista
-export type ArtistStatus = 'active' | 'inactive' | 'suspended';
+export type ArtistStatus = 'active' | 'pending' | 'inactive';
 
 // Status de usuário
-export type UserStatus = 'active' | 'expired' | 'cancelled';
+export type UserStatus = 'active' | 'pending' | 'banned';
 
 // Status de transação
 export type TransactionStatus = 'completed' | 'pending' | 'failed' | 'refunded';
@@ -84,20 +84,28 @@ export interface EditArtistModalProps {
   readonly mode?: 'create' | 'edit';
 }
 
-// Interface para dados do formulário de artista
+/**
+ * Dados do formulário de artista
+ */
 export interface ArtistFormData {
-  readonly id?: string;
-  readonly name: string;
-  readonly email: string;
-  readonly bio: string;
-  readonly genre: string;
-  readonly monetizationPlan: MonetizationPlan;
-  readonly paymentMethod: PaymentMethod;
-  readonly phoneNumber?: string;
-  readonly verified: boolean;
-  readonly isActive: boolean;
-  readonly receiveNotifications: boolean;
-  readonly allowPublicProfile: boolean;
+  name: string;
+  email: string;
+  phone?: string;
+  bio?: string;
+  genre?: string;
+  country?: string;
+  city?: string;
+  status: 'active' | 'pending' | 'inactive';
+  avatarFile?: File;
+  bannerFile?: File;
+  socialLinks?: {
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+    youtube?: string;
+    spotify?: string;
+    website?: string;
+  };
 }
 
 // Props do Modal de edição de usuário
@@ -110,17 +118,18 @@ export interface EditUserModalProps {
   readonly mode?: 'create' | 'edit';
 }
 
-// Interface para dados do formulário de usuário
+/**
+ * Dados do formulário de usuário
+ */
 export interface UserFormData {
-  readonly id?: string;
-  readonly name: string;
-  readonly email: string;
-  readonly plan: MonetizationPlan;
-  readonly paymentMethod?: PaymentMethod;
-  readonly phoneNumber?: string;
-  readonly isActive: boolean;
-  readonly receiveNotifications: boolean;
-  readonly status?: UserStatus;
+  name: string;
+  email: string;
+  role: 'admin' | 'artist' | 'user';
+  status: 'active' | 'pending' | 'banned';
+  country?: string;
+  city?: string;
+  phone?: string;
+  avatarFile?: File;
 }
 
 // Props do Modal de edição de álbum
@@ -133,17 +142,17 @@ export interface EditAlbumModalProps {
   readonly mode?: 'create' | 'edit';
 }
 
-// Interface para dados do formulário de álbum
+/**
+ * Dados do formulário de álbum
+ */
 export interface AlbumFormData {
-  readonly id?: string;
-  readonly title: string;
-  readonly artistId: string;
-  readonly trackCount: number;
-  readonly totalDuration: number;
-  readonly status: ContentStatus;
-  readonly releaseDate: string;
-  readonly coverArt?: string;
-  readonly coverFile?: File;
+  title: string;
+  artistId: string;
+  trackCount?: number;
+  totalDuration?: number;
+  releaseDate?: string;
+  status: 'published' | 'draft' | 'removed';
+  coverFile?: File;
 }
 
 // Props do Modal de edição de vídeo
@@ -156,17 +165,33 @@ export interface EditVideoModalProps {
   readonly mode?: 'create' | 'edit';
 }
 
-// Interface para dados do formulário de vídeo
+/**
+ * Dados do formulário de vídeo
+ */
 export interface VideoFormData {
-  readonly id?: string;
-  readonly title: string;
-  readonly artistId: string;
-  readonly duration: number;
-  readonly status: ContentStatus;
-  readonly uploadDate: string;
-  readonly thumbnailUrl?: string;
-  readonly thumbnailFile?: File;
-  readonly videoUrl?: string;
+  title: string;
+  artistId: string;
+  duration: number;
+  status: 'published' | 'draft' | 'removed';
+  videoFile?: File;
+  thumbnailFile?: File;
+}
+
+/**
+ * Dados do formulário de faixa
+ */
+export interface TrackFormData {
+  title: string;
+  artistId: string;
+  albumId?: string;
+  duration: number;
+  releaseDate?: string;
+  status: 'published' | 'draft' | 'removed';
+  coverFile?: File;
+  audioFile?: File;
+  genre?: string;
+  isrc?: string;
+  lyrics?: string;
 }
 
 // Context do sistema de modal
