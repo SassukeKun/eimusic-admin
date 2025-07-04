@@ -1,15 +1,15 @@
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 // Lista de emails com permissão de administrador
 const ADMIN_EMAILS = [
-  'admin@eimusic.com',
-  // Adicione outros emails de administradores conforme necessário
+  'damonsalvatoreeee@gmail.com',
 ];
 
 // Rotas que requerem autenticação de administrador
-const PROTECTED_ROUTES = [
+const ADMIN_ROUTES = [
   '/admin',
   '/admin/analytics',
   '/admin/artists',
@@ -23,19 +23,27 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req, res });
   
+  const path = req.nextUrl.pathname;
+  
   // Verificar se a rota atual requer autenticação de administrador
-  const isProtectedRoute = PROTECTED_ROUTES.some(route => 
-    req.nextUrl.pathname === route || req.nextUrl.pathname.startsWith(`${route}/`)
+  const isAdminRoute = ADMIN_ROUTES.some(route => 
+    path === route || path.startsWith(`${route}/`)
   );
   
-  if (isProtectedRoute) {
+  // Permitir acesso à página de login do admin, mesmo sem autenticação
+  if (path === '/admin/login') {
+    return res;
+  }
+  
+  // Para rotas administrativas, verificar autenticação e permissões
+  if (isAdminRoute) {
     // Verificar a sessão do usuário
     const { data: { session } } = await supabase.auth.getSession();
     
     // Se não houver sessão, redirecionar para a página de login
     if (!session) {
-      const redirectUrl = new URL('/login', req.url);
-      redirectUrl.searchParams.set('redirectTo', req.nextUrl.pathname);
+      const redirectUrl = new URL('/admin/login', req.url);
+      redirectUrl.searchParams.set('redirectTo', path);
       return NextResponse.redirect(redirectUrl);
     }
     
@@ -51,8 +59,9 @@ export async function middleware(req: NextRequest) {
   return res;
 }
 
+// Definir quais rotas o middleware deve interceptar
 export const config = {
   matcher: [
-    '/admin/:path*',
+    '/admin/:path*',  // Intercepta todas as rotas que começam com /admin
   ],
-}; 
+};

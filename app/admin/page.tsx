@@ -3,50 +3,66 @@
 
 import { useState, useEffect } from 'react';
 import { Users, Music, DollarSign, UserCheck, ArrowRight } from 'lucide-react';
-import { motion } from 'framer-motion';
 import StatsCard from '@/components/admin/StatsCard';
 import PageHeader from '@/components/admin/PageHeader';
-import Button from '@/components/admin/Button';
+// import Button from '@/components/admin/Button';
+import Link from 'next/link';
 import type { DashboardStats } from '@/types/admin';
+import { useApi } from '@/hooks/useApi';
+import { useToast } from '@/components/hooks/useToast';
+
+// Definir tipos para artistas recentes e faixas populares
+interface RecentArtist {
+  id: string;
+  name: string;
+  genre: string;
+  image: string;
+  joinedDate: string;
+}
+
+interface TopTrack {
+  id: string;
+  title: string;
+  artist: string;
+  plays: number;
+  revenue: number;
+}
 
 export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [recentArtists, setRecentArtists] = useState<RecentArtist[]>([]);
+  const [topTracks, setTopTracks] = useState<TopTrack[]>([]);
+  const api = useApi<DashboardStats | RecentArtist[] | TopTrack[]>();
+  const toast = useToast();
   
-  // Simular carregamento assíncrono
+  // Carregar dados do dashboard
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1000);
+    const fetchDashboardData = async () => {
+      setIsLoading(true);
+      
+      try {
+        // Buscar estatísticas
+        const statsData = await api.get('/api/dashboard/stats');
+        setStats(statsData as DashboardStats);
+        
+        // Buscar artistas recentes
+        const artistsData = await api.get('/api/dashboard/recent-artists');
+        setRecentArtists(artistsData as RecentArtist[]);
+        
+        // Buscar faixas populares
+        const tracksData = await api.get('/api/dashboard/top-tracks');
+        setTopTracks(tracksData as TopTrack[]);
+      } catch (error) {
+        console.error('Erro ao carregar dados do dashboard:', error instanceof Error ? error.message : 'Erro desconhecido');
+        toast.error('Erro ao carregar dados do dashboard');
+      } finally {
+        setIsLoading(false);
+      }
+    };
     
-    return () => clearTimeout(timer);
-  }, []);
-
-  // Mock data - em Meticais (MT)
-  const stats: DashboardStats = {
-    totalUsers: 45320,
-    totalArtists: 1250,
-    totalTracks: 15680,
-    totalRevenue: 2456000, // 2.456M MT
-    monthlyGrowth: {
-      users: 12.5,
-      artists: 8.3,
-      tracks: 15.7,
-      revenue: 23.4,
-    },
-  };
-
-  // Dados recentes para os cards
-  const recentArtists = [
-    { id: '1', name: 'Lizha James', genre: 'Pandza', image: 'https://ui-avatars.com/api/?name=Lizha+James&background=6366f1&color=fff', joinedDate: '2023-04-15' },
-    { id: '2', name: 'Valter Artístico', genre: 'Hip Hop', image: 'https://ui-avatars.com/api/?name=Valter+Artistico&background=6366f1&color=fff', joinedDate: '2023-05-22' },
-    { id: '3', name: 'Marllen', genre: 'Pop', image: 'https://ui-avatars.com/api/?name=Marllen&background=6366f1&color=fff', joinedDate: '2023-08-05' },
-  ];
-  
-  const topTracks = [
-    { id: '1', title: 'Nita Famba', artist: 'Lizha James', plays: 45600, revenue: 12500 },
-    { id: '2', title: 'Tsovani Wanga', artist: 'MC Roger', plays: 32000, revenue: 8900 },
-    { id: '3', title: 'Eparaka', artist: 'Valter Artístico', plays: 28500, revenue: 7300 },
-  ];
+    fetchDashboardData();
+  }, [api, toast]);
 
   // Componente de skeleton loader para os cards
   const SkeletonCard = () => (
@@ -78,7 +94,7 @@ export default function AdminDashboard() {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {isLoading ? (
+        {isLoading || !stats ? (
           // Skeleton loaders durante o carregamento
           <>
             <SkeletonCard />
@@ -128,58 +144,49 @@ export default function AdminDashboard() {
         <div className="card">
           <div className="card-header flex justify-between items-center">
             <h2 className="text-lg font-semibold text-foreground">Artistas Recentes</h2>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              rightIcon={<ArrowRight className="size-4" />}
-            >
+            <Link href="/admin/artists" className="flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium">
               Ver todos
-            </Button>
+              <ArrowRight className="ml-1 size-4" />
+            </Link>
           </div>
           <div className="card-body">
             {isLoading ? (
-              // Skeleton loader para a lista
               <div className="space-y-4">
-                {[1, 2, 3].map((index) => (
-                  <div key={index} className="flex items-center animate-pulse">
-                    <div className="size-10 bg-gray-200 rounded-full"></div>
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center animate-pulse">
+                    <div className="size-10 rounded-full bg-gray-200"></div>
                     <div className="ml-4 flex-1">
-                      <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-3 w-24 bg-gray-100 rounded"></div>
+                      <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+                      <div className="mt-2 h-3 w-1/3 bg-gray-200 rounded"></div>
                     </div>
                   </div>
                 ))}
               </div>
+            ) : recentArtists.length === 0 ? (
+              <div className="text-center p-6 text-gray-500">
+                Nenhum artista encontrado
+              </div>
             ) : (
-              // Lista de artistas recentes
-              <ul className="divide-y divide-border">
-                {recentArtists.map((artist, index) => (
-                  <motion.li 
-                    key={artist.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="py-3 flex items-center"
-                  >
-                    <img
-                      src={artist.image}
-                      alt={artist.name}
-                      className="size-10 rounded-full object-cover"
-                    />
-                    <div className="ml-4">
-                      <p className="text-sm font-medium text-foreground">{artist.name}</p>
-                      <p className="text-xs text-muted">{artist.genre}</p>
+              <div className="space-y-4">
+                {recentArtists.map((artist) => (
+                  <div key={artist.id} className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
+                    <div className="size-10 rounded-full overflow-hidden">
+                      <img 
+                        src={artist.image}
+                        alt={artist.name}
+                        className="object-cover size-full"
+                      />
                     </div>
-                    <p className="ml-auto text-xs text-muted">
-                      {new Date(artist.joinedDate).toLocaleDateString('pt-MZ', {
-                        day: 'numeric',
-                        month: 'short',
-                        year: 'numeric'
-                      })}
-                    </p>
-                  </motion.li>
+                    <div className="ml-4">
+                      <h3 className="font-medium text-gray-900">{artist.name}</h3>
+                      <p className="text-sm text-gray-500">{artist.genre}</p>
+                    </div>
+                    <div className="ml-auto text-sm text-gray-500">
+                      {new Date(artist.joinedDate).toLocaleDateString('pt-PT')}
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         </div>
@@ -187,59 +194,52 @@ export default function AdminDashboard() {
         {/* Top Tracks */}
         <div className="card">
           <div className="card-header flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-foreground">Top Faixas da Semana</h2>
-            <Button 
-              variant="ghost" 
-              size="sm"
-              rightIcon={<ArrowRight className="size-4" />}
-            >
+            <h2 className="text-lg font-semibold text-foreground">Faixas Populares</h2>
+            <Link href="/admin/content/tracks" className="flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium">
               Ver todas
-            </Button>
+              <ArrowRight className="ml-1 size-4" />
+            </Link>
           </div>
           <div className="card-body">
             {isLoading ? (
-              // Skeleton loader para a lista
               <div className="space-y-4">
-                {[1, 2, 3].map((index) => (
-                  <div key={index} className="flex items-center animate-pulse">
-                    <div className="h-4 w-4 bg-gray-200 rounded mr-2"></div>
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center animate-pulse">
+                    <div className="h-4 w-8 bg-gray-200 rounded mr-4"></div>
                     <div className="flex-1">
-                      <div className="h-4 w-32 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-3 w-24 bg-gray-100 rounded"></div>
+                      <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
+                      <div className="mt-2 h-3 w-1/3 bg-gray-200 rounded"></div>
                     </div>
-                    <div className="h-4 w-16 bg-gray-200 rounded"></div>
+                    <div className="h-4 w-16 bg-gray-200 rounded ml-4"></div>
                   </div>
                 ))}
               </div>
+            ) : topTracks.length === 0 ? (
+              <div className="text-center p-6 text-gray-500">
+                Nenhuma faixa encontrada
+              </div>
             ) : (
-              // Lista de faixas principais
-              <ul className="divide-y divide-border">
+              <div className="space-y-4">
                 {topTracks.map((track, index) => (
-                  <motion.li 
-                    key={track.id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    className="py-3 flex items-center"
-                  >
-                    <span className="size-6 flex items-center justify-center bg-gray-100 rounded-full text-sm font-medium text-foreground">
-                      {index + 1}
-                    </span>
+                  <div key={track.id} className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
+                    <div className="w-8 text-center font-medium text-gray-500">
+                      #{index + 1}
+                    </div>
                     <div className="ml-4 flex-1">
-                      <p className="text-sm font-medium text-foreground">{track.title}</p>
-                      <p className="text-xs text-muted">{track.artist}</p>
+                      <h3 className="font-medium text-gray-900">{track.title}</h3>
+                      <p className="text-sm text-gray-500">{track.artist}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium text-foreground">
-                        {track.plays.toLocaleString('pt-MZ')}
-                      </p>
-                      <p className="text-xs text-success">
-                        MT {track.revenue.toLocaleString('pt-MZ')}
-                      </p>
+                    <div className="flex flex-col items-end">
+                      <span className="text-sm font-medium text-gray-900">
+                        {new Intl.NumberFormat('pt-MZ').format(track.plays)} plays
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        MT {new Intl.NumberFormat('pt-MZ').format(track.revenue)}
+                      </span>
                     </div>
-                  </motion.li>
+                  </div>
                 ))}
-              </ul>
+              </div>
             )}
           </div>
         </div>
