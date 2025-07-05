@@ -1,4 +1,8 @@
 // scripts/test-supabase-connection.ts
+import * as dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
+
+import 'dotenv/config';
 import { createClient } from '@supabase/supabase-js';
 import { supabaseConfig } from '../config/supabase';
 
@@ -73,7 +77,8 @@ async function main() {
           throw userError;
         }
         
-        const user = userData.users.find(u => u.email === testEmail);
+        // Corrige tipagem para evitar erro TS2339
+        const user = (userData.users as { email: string }[]).find(u => u.email === testEmail);
         
         if (user) {
           console.log(`Usuário ${testEmail} existe no Supabase.`);
@@ -90,10 +95,22 @@ async function main() {
       console.log(`Usuário: ${authData.user?.email}`);
       console.log(`ID: ${authData.user?.id}`);
     }
+
+    // Testar leitura da tabela "albums" com a chave anon
+    console.log('\nTestando leitura da tabela "albums"...');
+    const { data: albums, error: albumsError } = await supabase
+      .from('albums')
+      .select('*');
+    if (albumsError) {
+      console.error('Erro ao buscar álbuns:', albumsError.message);
+    } else {
+      console.log(`Álbuns encontrados: ${albums.length}`);
+      console.dir(albums, { depth: null });
+    }
   } catch (error) {
     console.error('\nErro ao testar conexão:', error);
     process.exit(1);
   }
 }
 
-main(); 
+main();

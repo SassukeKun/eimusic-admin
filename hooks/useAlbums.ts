@@ -65,7 +65,7 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
     try {
       const data = await apiGet(`/api/albums/${id}`);
       return data as Album;
-    } catch (error) {
+    } catch {
       toast.error('Erro ao carregar álbum');
       return null;
     }
@@ -105,7 +105,7 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
       
       toast.success('Álbum criado com sucesso');
       return data as Album;
-    } catch (error) {
+    } catch {
       toast.error('Erro ao criar álbum');
       return null;
     }
@@ -149,7 +149,7 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
       
       toast.success('Álbum atualizado com sucesso');
       return data as Album;
-    } catch (error) {
+    } catch {
       toast.error('Erro ao atualizar álbum');
       return null;
     }
@@ -167,7 +167,7 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
       
       toast.success('Álbum excluído com sucesso');
       return true;
-    } catch (error) {
+    } catch {
       toast.error('Erro ao excluir álbum');
       return false;
     }
@@ -195,12 +195,13 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
     setSearchQuery(query);
   }, []);
 
-  // Carregar álbuns ao montar o componente ou quando os filtros mudarem
+  // Carregar álbuns ao montar o componente apenas uma vez (evita loop infinito)
   useEffect(() => {
     if (initialLoad) {
       loadAlbums();
     }
-  }, [loadAlbums, initialLoad, filters, searchQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     albums,
@@ -217,4 +218,4 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
     resetFilters,
     updateSearch,
   };
-} 
+}

@@ -2,7 +2,6 @@
 import type { 
   MonetizationPlan, 
   PaymentMethod, 
-  ArtistStatus, 
   UserStatus, 
   TransactionStatus 
 } from './modal';
@@ -197,6 +196,13 @@ export interface Album {
   releaseDate: string;
   status: 'published' | 'draft' | 'removed';
   coverArt?: string;
+  // Extra fields from DB
+  createdAt?: string;
+  updatedAt?: string;
+  description?: string;
+  tags?: string[];
+  visibility?: string;
+  isExplicit?: boolean;
 }
 
 // Video types

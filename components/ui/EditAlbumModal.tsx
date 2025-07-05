@@ -8,6 +8,7 @@ import FormField from './FormField';
 import Input from './Input';
 import Select from './Select';
 import Button from '@/components/admin/Button';
+import Image from 'next/image';
 
 interface EditAlbumModalProps {
   album: Album | null;
@@ -43,7 +44,9 @@ export default function EditAlbumModal({
         artistId: album.artistId,
         trackCount: album.trackCount,
         totalDuration: album.totalDuration,
-        releaseDate: album.releaseDate.split('T')[0],
+        releaseDate: typeof album.releaseDate === 'string' && album.releaseDate.includes('T')
+          ? album.releaseDate.split('T')[0]
+          : album.releaseDate || '',
         status: album.status,
         coverFile: undefined
       });
@@ -51,16 +54,6 @@ export default function EditAlbumModal({
       setPreviewUrl(album.coverArt);
     }
   }, [album]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: Number(value) }));
-  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -91,136 +84,111 @@ export default function EditAlbumModal({
 
   return (
     <Modal
+      isOpen={true}
       title={album ? 'Editar Álbum' : 'Adicionar Álbum'}
       onClose={onCancel}
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <FormField
-          label="Título"
-          htmlFor="title"
-          required
-        >
+        <FormField label="Título" required>
           <Input
             id="title"
             name="title"
             value={formData.title}
-            onChange={handleInputChange}
+            onChange={(value) => setFormData(prev => ({ ...prev, title: value }))}
             placeholder="Digite o título do álbum"
             required
           />
         </FormField>
-
-        <FormField
-          label="Artista"
-          htmlFor="artistId"
-          required
-        >
+        <FormField label="Artista" required>
           <Select
             id="artistId"
             name="artistId"
             value={formData.artistId}
-            onChange={handleInputChange}
+            options={artists.map(artist => ({ value: artist.id, label: artist.name }))}
+            onChange={(value) => setFormData(prev => ({ ...prev, artistId: String(value) }))}
             required
-          >
-            <option value="">Selecione um artista</option>
-            {artists.map(artist => (
-              <option key={artist.id} value={artist.id}>
-                {artist.name}
-              </option>
-            ))}
-          </Select>
+          />
         </FormField>
-
         <div className="grid grid-cols-2 gap-4">
-          <FormField
-            label="Número de Faixas"
-            htmlFor="trackCount"
-          >
+          <FormField label="Número de Faixas">
             <Input
               id="trackCount"
               name="trackCount"
-              type="number"
-              min="0"
-              value={formData.trackCount}
-              onChange={handleNumberChange}
+              type="text"
+              value={formData.trackCount?.toString() || ''}
+              onChange={(value) => setFormData(prev => ({ ...prev, trackCount: Number(value) }))}
               placeholder="0"
             />
           </FormField>
-
-          <FormField
-            label="Duração Total (segundos)"
-            htmlFor="totalDuration"
-          >
+          <FormField label="Duração Total (segundos)">
             <Input
               id="totalDuration"
               name="totalDuration"
-              type="number"
-              min="0"
-              value={formData.totalDuration}
-              onChange={handleNumberChange}
+              type="text"
+              value={formData.totalDuration?.toString() || ''}
+              onChange={(value) => setFormData(prev => ({ ...prev, totalDuration: Number(value) }))}
               placeholder="0"
             />
           </FormField>
         </div>
-
-        <FormField
-          label="Data de Lançamento"
-          htmlFor="releaseDate"
-        >
+        <FormField label="Data de Lançamento">
           <Input
             id="releaseDate"
             name="releaseDate"
-            type="date"
+            type="text"
             value={formData.releaseDate}
-            onChange={handleInputChange}
+            onChange={(value) => setFormData(prev => ({ ...prev, releaseDate: value }))}
           />
         </FormField>
-
-        <FormField
-          label="Status"
-          htmlFor="status"
-          required
-        >
+        <FormField label="Status" required>
           <Select
             id="status"
             name="status"
             value={formData.status}
-            onChange={handleInputChange}
+            options={[
+              { value: 'draft', label: 'Rascunho' },
+              { value: 'published', label: 'Publicado' },
+              { value: 'removed', label: 'Removido' }
+            ]}
+            onChange={(value) => setFormData(prev => ({ ...prev, status: value as 'draft' | 'published' | 'removed' }))}
             required
-          >
-            <option value="draft">Rascunho</option>
-            <option value="published">Publicado</option>
-            <option value="removed">Removido</option>
-          </Select>
+          />
         </FormField>
-
-        <FormField
-          label="Capa do Álbum"
-          htmlFor="coverFile"
-        >
+        <FormField label="Capa do Álbum">
           <div className="space-y-2">
             <Input
               id="coverFile"
               name="coverFile"
-              type="file"
-              accept="image/*"
-              onChange={handleFileChange}
+              type="text"
+              onChange={() => {}}
               className="w-full"
             />
-            
+            {/* File input handled separately below */}
+            <input
+              id="coverFileHidden"
+              name="coverFile"
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={handleFileChange}
+            />
+            <Button type="button" onClick={() => document.getElementById('coverFileHidden')?.click()} variant="outline" size="sm">
+              Selecionar Capa
+            </Button>
             {previewUrl && (
               <div className="mt-2">
                 <p className="text-sm text-gray-500 mb-1">Pré-visualização:</p>
-                <img 
+                <Image 
                   src={previewUrl} 
                   alt="Pré-visualização da capa" 
                   className="w-32 h-32 object-cover rounded border"
+                  width={128}
+                  height={128}
                 />
               </div>
             )}
           </div>
         </FormField>
-
         <div className="flex justify-end space-x-3 mt-6">
           <Button 
             type="button" 
@@ -239,4 +207,4 @@ export default function EditAlbumModal({
       </form>
     </Modal>
   );
-} 
+}
