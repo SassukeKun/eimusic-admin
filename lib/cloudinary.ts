@@ -1,102 +1,65 @@
+// lib/cloudinary.ts
 import { v2 as cloudinary } from 'cloudinary';
-import { cloudinaryConfig } from '@/config/supabase';
 
-// Configurar o Cloudinary
+// Configurar Cloudinary
 cloudinary.config({
-  cloud_name: cloudinaryConfig.cloudName,
-  api_key: cloudinaryConfig.apiKey,
-  api_secret: cloudinaryConfig.apiSecret,
-  secure: true
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
 /**
- * Faz o upload de uma imagem para o Cloudinary
- * @param file Arquivo de imagem
- * @param folder Pasta no Cloudinary
- * @returns URL da imagem
+ * Upload de imagem para o Cloudinary
+ * @param file - Arquivo a ser enviado
+ * @param folder - Pasta no Cloudinary (ex: 'eimusic/albums')
+ * @returns URL da imagem uploadada
  */
-export async function uploadImage(file: File, folder: string): Promise<string> {
+export async function uploadImage(file: File, folder: string = 'eimusic'): Promise<string> {
   try {
-    // Converter o arquivo para base64
-    const fileBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(fileBuffer).toString('base64');
-    const fileUri = `data:${file.type};base64,${base64}`;
+    console.log('📤 Iniciando upload para Cloudinary...', { fileName: file.name, folder });
     
-    // Fazer upload para o Cloudinary
-    const result = await cloudinary.uploader.upload(fileUri, {
-      folder,
+    // Converter File para base64
+    const bytes = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const base64 = `data:${file.type};base64,${buffer.toString('base64')}`;
+    
+    // Upload para Cloudinary
+    const result = await cloudinary.uploader.upload(base64, {
+      folder: folder,
       resource_type: 'image',
       transformation: [
-        { quality: 'auto:good' },
-        { fetch_format: 'auto' },
+        { width: 800, height: 800, crop: 'fill', quality: 'auto' }, // Otimizar tamanho
       ],
     });
     
+    console.log('✅ Upload concluído:', result.secure_url);
     return result.secure_url;
   } catch (error) {
-    console.error('Erro ao fazer upload de imagem:', error);
-    throw new Error('Falha ao fazer upload de imagem');
+    console.error('❌ Erro no upload:', error);
+    throw new Error('Falha no upload da imagem');
   }
 }
 
 /**
- * Resultado do upload de um vídeo
+ * Deletar imagem do Cloudinary
+ * @param publicId - ID público da imagem no Cloudinary
  */
-export interface VideoUploadResult {
-  videoUrl: string;
-  thumbnailUrl: string;
-}
-
-/**
- * Faz o upload de um vídeo para o Cloudinary
- * @param file Arquivo de vídeo
- * @param folder Pasta no Cloudinary
- * @returns Objeto com URLs do vídeo e thumbnail
- */
-export async function uploadVideo(file: File, folder: string): Promise<VideoUploadResult> {
+export async function deleteImage(publicId: string): Promise<void> {
   try {
-    // Converter o arquivo para base64
-    const fileBuffer = await file.arrayBuffer();
-    const base64 = Buffer.from(fileBuffer).toString('base64');
-    const fileUri = `data:${file.type};base64,${base64}`;
-    
-    // Fazer upload para o Cloudinary
-    const result = await cloudinary.uploader.upload(fileUri, {
-      folder,
-      resource_type: 'video',
-      eager: [
-        // Gerar thumbnail
-        { format: 'jpg', transformation: [{ width: 640, crop: 'fill' }] },
-        // Otimizar vídeo para streaming
-        { format: 'mp4', transformation: [
-          { quality: 'auto:good' },
-          { streaming_profile: 'hd' }
-        ]},
-      ],
-      eager_async: true,
-      eager_notification_url: process.env.CLOUDINARY_NOTIFICATION_URL,
-    });
-    
-    return {
-      videoUrl: result.secure_url,
-      thumbnailUrl: result.eager?.[0]?.secure_url || result.secure_url.replace(/\.[^/.]+$/, '.jpg'),
-    };
+    await cloudinary.uploader.destroy(publicId);
+    console.log('🗑️ Imagem deletada:', publicId);
   } catch (error) {
-    console.error('Erro ao fazer upload de vídeo:', error);
-    throw new Error('Falha ao fazer upload de vídeo');
+    console.error('❌ Erro ao deletar imagem:', error);
+    // Não fazer throw aqui para não quebrar o fluxo principal
   }
 }
 
 /**
- * Exclui um arquivo do Cloudinary
- * @param publicId ID público do arquivo
- * @param resourceType Tipo de recurso ('image' ou 'video')
+ * Extrair public_id de uma URL do Cloudinary
+ * @param url - URL da imagem
+ * @returns Public ID ou null se não for URL do Cloudinary
  */
-export async function deleteCloudinaryFile(publicId: string, resourceType: 'image' | 'video' = 'image'): Promise<void> {
-  try {
-    await cloudinary.uploader.destroy(publicId, { resource_type: resourceType });
-  } catch (error) {
-    console.error('Erro ao excluir arquivo do Cloudinary:', error);
-    throw new Error('Falha ao excluir arquivo');
-  }
-} 
+export function extractPublicId(url: string): string | null {
+  const match = url.match(/\/([^\/]+)\/([^\/]+)\/v\d+\/(.+)\.(jpg|jpeg|png|gif|webp)$/i);
+  return match ? match[3] : null;
+}
