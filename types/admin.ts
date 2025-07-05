@@ -115,6 +115,7 @@ export interface DashboardStats {
   totalUsers: number;
   totalArtists: number;
   totalTracks: number;
+  totalVideos: number;
   totalRevenue: number;
   monthlyGrowth: {
     users: number;

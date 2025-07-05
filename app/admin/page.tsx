@@ -2,10 +2,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Users, Music, DollarSign, UserCheck, ArrowRight } from 'lucide-react';
+import { Users, Music, DollarSign, ArrowRight } from 'lucide-react';
 import StatsCard from '@/components/admin/StatsCard';
 import PageHeader from '@/components/admin/PageHeader';
-// import Button from '@/components/admin/Button';
 import Link from 'next/link';
 import type { DashboardStats } from '@/types/admin';
 import { useApi } from '@/hooks/useApi';
@@ -47,11 +46,11 @@ export default function AdminDashboard() {
         setStats(statsData as DashboardStats);
         
         // Buscar artistas recentes
-        const artistsData = await api.get('/api/dashboard/recent-artists');
+        const artistsData = await api.get('/api/dashboard/recent-artists?limit=5');
         setRecentArtists(artistsData as RecentArtist[]);
         
         // Buscar faixas populares
-        const tracksData = await api.get('/api/dashboard/top-tracks');
+        const tracksData = await api.get('/api/dashboard/top-tracks?limit=5');
         setTopTracks(tracksData as TopTrack[]);
       } catch (error) {
         console.error('Erro ao carregar dados do dashboard:', error instanceof Error ? error.message : 'Erro desconhecido');
@@ -66,19 +65,17 @@ export default function AdminDashboard() {
 
   // Componente de skeleton loader para os cards
   const SkeletonCard = () => (
-    <div className="bg-white rounded-lg shadow animate-pulse">
-      <div className="p-6">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <div className="h-4 w-24 bg-gray-200 rounded mb-3"></div>
-            <div className="h-8 w-32 bg-gray-300 rounded mb-4"></div>
-            <div className="flex items-center mt-4">
-              <div className="h-4 w-16 bg-gray-200 rounded"></div>
-            </div>
+    <div className="bg-white rounded-lg shadow animate-pulse p-6">
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          <div className="h-4 w-24 bg-gray-200 rounded mb-3"></div>
+          <div className="h-8 w-32 bg-gray-300 rounded mb-4"></div>
+          <div className="flex items-center mt-4">
+            <div className="h-4 w-16 bg-gray-200 rounded"></div>
           </div>
-          <div className="ml-4">
-            <div className="size-12 bg-gray-200 rounded-full"></div>
-          </div>
+        </div>
+        <div className="ml-4">
+          <div className="h-12 w-12 bg-gray-200 rounded-full"></div>
         </div>
       </div>
     </div>
@@ -89,7 +86,7 @@ export default function AdminDashboard() {
       {/* Cabeçalho da página */}
       <PageHeader
         title="Dashboard"
-        description="Bem-vindo de volta! Aqui está o que está acontecendo com a plataforma EiMusic hoje."
+        description="Bem-vindo ao painel administrativo da plataforma EiMusic."
       />
 
       {/* Stats Grid */}
@@ -106,33 +103,35 @@ export default function AdminDashboard() {
           // Cards de estatísticas após o carregamento
           <>
             <StatsCard
-              title="Total de Usuários"
+              title="Usuários"
               value={stats.totalUsers}
               change={stats.monthlyGrowth.users}
-              changeType="increase"
+              changeType={stats.monthlyGrowth.users >= 0 ? "increase" : "decrease"}
               icon={Users}
             />
             <StatsCard
-              title="Total de Artistas"
+              title="Artistas"
               value={stats.totalArtists}
               change={stats.monthlyGrowth.artists}
-              changeType="increase"
-              icon={UserCheck}
+              changeType={stats.monthlyGrowth.artists >= 0 ? "increase" : "decrease"}
+              icon={Users}
             />
             <StatsCard
-              title="Total de Faixas"
-              value={stats.totalTracks}
+              title="Conteúdo"
+              value={stats.totalTracks + stats.totalVideos}
               change={stats.monthlyGrowth.tracks}
-              changeType="increase"
+              changeType={stats.monthlyGrowth.tracks >= 0 ? "increase" : "decrease"}
               icon={Music}
+              subtitle={`${stats.totalTracks} faixas, ${stats.totalVideos} vídeos`}
             />
             <StatsCard
-              title="Receita Total"
+              title="Receita"
               value={stats.totalRevenue}
               change={stats.monthlyGrowth.revenue}
-              changeType="increase"
+              changeType={stats.monthlyGrowth.revenue >= 0 ? "increase" : "decrease"}
               icon={DollarSign}
               prefix="MT "
+              valueFormatter={(value: number) => value.toLocaleString('pt-MZ')}
             />
           </>
         )}
@@ -141,20 +140,20 @@ export default function AdminDashboard() {
       {/* Recent Activity */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Artistas Recentes */}
-        <div className="card">
-          <div className="card-header flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-foreground">Artistas Recentes</h2>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Artistas Recentes</h2>
             <Link href="/admin/artists" className="flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium">
               Ver todos
-              <ArrowRight className="ml-1 size-4" />
+              <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </div>
-          <div className="card-body">
+          <div>
             {isLoading ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
                   <div key={i} className="flex items-center animate-pulse">
-                    <div className="size-10 rounded-full bg-gray-200"></div>
+                    <div className="h-10 w-10 rounded-full bg-gray-200"></div>
                     <div className="ml-4 flex-1">
                       <div className="h-4 w-1/2 bg-gray-200 rounded"></div>
                       <div className="mt-2 h-3 w-1/3 bg-gray-200 rounded"></div>
@@ -170,11 +169,11 @@ export default function AdminDashboard() {
               <div className="space-y-4">
                 {recentArtists.map((artist) => (
                   <div key={artist.id} className="flex items-center p-2 hover:bg-gray-50 rounded-md transition-colors">
-                    <div className="size-10 rounded-full overflow-hidden">
+                    <div className="h-10 w-10 rounded-full overflow-hidden">
                       <img 
                         src={artist.image}
                         alt={artist.name}
-                        className="object-cover size-full"
+                        className="h-full w-full object-cover"
                       />
                     </div>
                     <div className="ml-4">
@@ -182,7 +181,7 @@ export default function AdminDashboard() {
                       <p className="text-sm text-gray-500">{artist.genre}</p>
                     </div>
                     <div className="ml-auto text-sm text-gray-500">
-                      {new Date(artist.joinedDate).toLocaleDateString('pt-PT')}
+                      {new Date(artist.joinedDate).toLocaleDateString('pt-MZ')}
                     </div>
                   </div>
                 ))}
@@ -192,15 +191,15 @@ export default function AdminDashboard() {
         </div>
 
         {/* Top Tracks */}
-        <div className="card">
-          <div className="card-header flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-foreground">Faixas Populares</h2>
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Faixas Populares</h2>
             <Link href="/admin/content/tracks" className="flex items-center text-indigo-600 hover:text-indigo-800 text-sm font-medium">
               Ver todas
-              <ArrowRight className="ml-1 size-4" />
+              <ArrowRight className="ml-1 h-4 w-4" />
             </Link>
           </div>
-          <div className="card-body">
+          <div>
             {isLoading ? (
               <div className="space-y-4">
                 {[...Array(3)].map((_, i) => (
@@ -231,10 +230,10 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex flex-col items-end">
                       <span className="text-sm font-medium text-gray-900">
-                        {new Intl.NumberFormat('pt-MZ').format(track.plays)} plays
+                        {track.plays.toLocaleString('pt-MZ')} plays
                       </span>
                       <span className="text-xs text-gray-500">
-                        MT {new Intl.NumberFormat('pt-MZ').format(track.revenue)}
+                        MT {track.revenue.toLocaleString('pt-MZ')}
                       </span>
                     </div>
                   </div>

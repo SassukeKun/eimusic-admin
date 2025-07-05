@@ -1,156 +1,168 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useApi } from './useApi';
 import { useToast } from '@/components/hooks/useToast';
 import type { Artist } from '@/types/admin';
 import type { ArtistFormData } from '@/types/modal';
 
 interface UseArtistsOptions {
-  initialLoad?: boolean;
+  autoFetch?: boolean;
+  initialFilters?: Record<string, string>;
 }
 
 /**
  * Hook para gerenciar artistas
  */
 export function useArtists(options: UseArtistsOptions = {}) {
-  const { initialLoad = true } = options;
+  const { autoFetch = true, initialFilters = {} } = options;
   const [artists, setArtists] = useState<Artist[]>([]);
+  const [filters, setFilters] = useState<Record<string, string>>(initialFilters);
+  const [searchQuery, setSearchQuery] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [filters, setFilters] = useState<Record<string, string>>({});
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
   const api = useApi<Artist | Artist[]>();
   const toast = useToast();
 
   /**
-   * Carrega a lista de artistas
+   * Busca todos os artistas com filtros aplicados
    */
-  const loadArtists = useCallback(async () => {
+  const fetchArtists = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-    
+
     try {
-      // Construir URL com filtros
-      const params = new URLSearchParams();
+      // Construir URL com parâmetros de consulta
+      const url = new URL('/api/artists', window.location.origin);
       
-      if (searchQuery) {
-        params.append('search', searchQuery);
-      }
-      
+      // Adicionar filtros à URL
       Object.entries(filters).forEach(([key, value]) => {
-        if (value) {
-          params.append(key, value);
-        }
+        if (value) url.searchParams.append(key, value);
       });
       
-      const url = `/api/artists${params.toString() ? `?${params.toString()}` : ''}`;
+      // Adicionar termo de busca se houver
+      if (searchQuery) {
+        url.searchParams.append('search', searchQuery);
+      }
       
-      const data = await api.get(url);
-      setArtists(Array.isArray(data) ? data : []);
-    } catch (error) {
-      const errorObj = error instanceof Error ? error : new Error(String(error));
-      setError(errorObj);
-      toast.error('Erro ao carregar artistas');
+      // Fazer a requisição
+      const data = await api.get(url.toString());
+      setArtists(data as Artist[]);
+      return data as Artist[];
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Erro ao buscar artistas');
+      setError(error);
+      toast.error('Falha ao carregar artistas');
+      return [];
     } finally {
       setIsLoading(false);
     }
   }, [api, filters, searchQuery, toast]);
 
   /**
-   * Carrega um artista pelo ID
+   * Busca um artista pelo ID
    */
-  const getArtist = useCallback(async (id: string): Promise<Artist | null> => {
+  const fetchArtistById = useCallback(async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+
     try {
       const data = await api.get(`/api/artists/${id}`);
+      setSelectedArtist(data as Artist);
       return data as Artist;
-    } catch (error) {
-      toast.error('Erro ao carregar artista');
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(`Erro ao buscar artista ${id}`);
+      setError(error);
+      toast.error('Falha ao carregar detalhes do artista');
       return null;
+    } finally {
+      setIsLoading(false);
     }
   }, [api, toast]);
 
   /**
    * Cria um novo artista
    */
-  const createArtist = useCallback(async (formData: ArtistFormData): Promise<Artist | null> => {
+  const createArtist = useCallback(async (formData: ArtistFormData) => {
+    setIsLoading(true);
+    setError(null);
+
     try {
-      // Mapear dados do formulário para o formato da API
-      const artistData = {
-        name: formData.name,
-        email: formData.email,
-        genre: formData.genre,
-        verified: formData.verified,
-        status: formData.isActive ? 'active' : 'inactive',
-        monetizationPlan: formData.monetizationPlan,
-        paymentMethod: formData.paymentMethod,
-        phoneNumber: formData.phoneNumber,
-        bio: formData.bio,
-      };
-      
-      const data = await api.post('/api/artists', artistData);
-      
-      // Atualizar lista de artistas
-      setArtists(prev => [...prev, data as Artist]);
-      
+      const data = await api.post('/api/artists', formData);
       toast.success('Artista criado com sucesso');
+      
+      // Atualizar a lista de artistas
+      await fetchArtists();
+      
       return data as Artist;
-    } catch (error) {
-      toast.error('Erro ao criar artista');
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error('Erro ao criar artista');
+      setError(error);
+      toast.error('Falha ao criar artista');
       return null;
+    } finally {
+      setIsLoading(false);
     }
-  }, [api, toast]);
+  }, [api, fetchArtists, toast]);
 
   /**
    * Atualiza um artista existente
    */
-  const updateArtist = useCallback(async (id: string, formData: ArtistFormData): Promise<Artist | null> => {
+  const updateArtist = useCallback(async (id: string, formData: ArtistFormData) => {
+    setIsLoading(true);
+    setError(null);
+
     try {
-      // Mapear dados do formulário para o formato da API
-      const artistData = {
-        name: formData.name,
-        email: formData.email,
-        genre: formData.genre,
-        verified: formData.verified,
-        status: formData.isActive ? 'active' : 'inactive',
-        monetizationPlan: formData.monetizationPlan,
-        paymentMethod: formData.paymentMethod,
-        phoneNumber: formData.phoneNumber,
-        bio: formData.bio,
-      };
-      
-      const data = await api.patch(`/api/artists/${id}`, artistData);
-      
-      // Atualizar lista de artistas
-      setArtists(prev => 
-        prev.map(artist => 
-          artist.id === id ? data as Artist : artist
-        )
-      );
-      
+      const data = await api.patch(`/api/artists/${id}`, formData);
       toast.success('Artista atualizado com sucesso');
+      
+      // Atualizar a lista de artistas
+      await fetchArtists();
+      
+      // Atualizar o artista selecionado se for o mesmo
+      if (selectedArtist?.id === id) {
+        setSelectedArtist(data as Artist);
+      }
+      
       return data as Artist;
-    } catch (error) {
-      toast.error('Erro ao atualizar artista');
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(`Erro ao atualizar artista ${id}`);
+      setError(error);
+      toast.error('Falha ao atualizar artista');
       return null;
+    } finally {
+      setIsLoading(false);
     }
-  }, [api, toast]);
+  }, [api, fetchArtists, selectedArtist, toast]);
 
   /**
    * Exclui um artista
    */
-  const deleteArtist = useCallback(async (id: string): Promise<boolean> => {
+  const deleteArtist = useCallback(async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+
     try {
       await api.remove(`/api/artists/${id}`);
-      
-      // Atualizar lista de artistas
-      setArtists(prev => prev.filter(artist => artist.id !== id));
-      
       toast.success('Artista excluído com sucesso');
+      
+      // Atualizar a lista de artistas
+      await fetchArtists();
+      
+      // Limpar o artista selecionado se for o mesmo
+      if (selectedArtist?.id === id) {
+        setSelectedArtist(null);
+      }
+      
       return true;
-    } catch (error) {
-      toast.error('Erro ao excluir artista');
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(`Erro ao excluir artista ${id}`);
+      setError(error);
+      toast.error('Falha ao excluir artista');
       return false;
+    } finally {
+      setIsLoading(false);
     }
-  }, [api, toast]);
+  }, [api, fetchArtists, selectedArtist, toast]);
 
   /**
    * Atualiza os filtros
@@ -160,40 +172,34 @@ export function useArtists(options: UseArtistsOptions = {}) {
   }, []);
 
   /**
-   * Reseta os filtros
+   * Limpa os filtros
    */
-  const resetFilters = useCallback(() => {
+  const clearFilters = useCallback(() => {
     setFilters({});
     setSearchQuery('');
   }, []);
 
-  /**
-   * Atualiza a pesquisa
-   */
-  const updateSearch = useCallback((query: string) => {
-    setSearchQuery(query);
-  }, []);
-
-  // Carregar artistas ao montar o componente ou quando os filtros mudarem
+  // Carregar artistas automaticamente se autoFetch for true
   useEffect(() => {
-    if (initialLoad) {
-      loadArtists();
+    if (autoFetch) {
+      fetchArtists();
     }
-  }, [loadArtists, initialLoad, filters, searchQuery]);
+  }, [autoFetch, fetchArtists]);
 
   return {
     artists,
+    selectedArtist,
     isLoading,
     error,
     filters,
     searchQuery,
-    loadArtists,
-    getArtist,
+    setSearchQuery,
+    fetchArtists,
+    fetchArtistById,
     createArtist,
     updateArtist,
     deleteArtist,
     updateFilters,
-    resetFilters,
-    updateSearch,
+    clearFilters,
   };
 } 

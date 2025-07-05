@@ -7,7 +7,8 @@ import type { User, Session } from '@supabase/supabase-js';
 
 // Lista de emails com permissão de administrador
 const ADMIN_EMAILS = [
-  'admin@eimusic.com',
+  'admin@eimusic.co.mz',
+  'damonsalvatoreeee@gmail.com',
   // Adicione outros emails de administradores conforme necessário
 ];
 
@@ -70,7 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Função para fazer logout
   const signOut = async () => {
     await supabase.auth.signOut();
-    router.push('/login');
+    router.push('/admin/login');
   };
 
   return (

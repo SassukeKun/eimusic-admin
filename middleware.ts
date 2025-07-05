@@ -5,7 +5,8 @@ import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
 
 // Lista de emails com permissão de administrador
 const ADMIN_EMAILS = [
-  'damonsalvatoreeee@gmail.com',
+  'admin@eimusic.co.mz',
+  'allenvictor33@gmail.com',
 ];
 
 // Rotas que requerem autenticação de administrador

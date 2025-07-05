@@ -1,55 +1,36 @@
 import { NextResponse } from 'next/server';
+import { fetchAllArtists, fetchArtistsWithFilters, createArtist } from '@/services/artists';
 import { supabaseAdmin } from '@/lib/supabase';
-import type { Database } from '@/types/database';
+import type { ArtistFormData } from '@/types/modal';
 
 /**
  * GET /api/artists
- * Busca todos os artistas
+ * Lista todos os artistas com suporte a filtros e busca
  */
 export async function GET(request: Request) {
   try {
-    const url = new URL(request.url);
-    const searchQuery = url.searchParams.get('search') || '';
-    const statusFilter = url.searchParams.get('status') || '';
-    const verifiedFilter = url.searchParams.get('verified') || '';
-    const planFilter = url.searchParams.get('plan') || '';
+    const { searchParams } = new URL(request.url);
+    const searchQuery = searchParams.get('search') || undefined;
     
-    // Iniciar a consulta
-    let query = supabaseAdmin.from('artists').select('*');
+    // Extrair filtros dos parâmetros de consulta
+    const filters: Record<string, string> = {};
     
-    // Aplicar filtros
-    if (statusFilter) {
-      query = query.eq('status', statusFilter);
-    }
+    // Filtros possíveis: status, genre, verified, monetization_plan
+    ['status', 'genre', 'verified', 'monetization_plan'].forEach(key => {
+      const value = searchParams.get(key);
+      if (value) filters[key] = value;
+    });
     
-    if (verifiedFilter) {
-      const isVerified = verifiedFilter === 'verified';
-      query = query.eq('verified', isVerified);
-    }
+    // Se houver filtros ou busca, usar a função de filtros
+    const artists = Object.keys(filters).length > 0 || searchQuery
+      ? await fetchArtistsWithFilters(filters, searchQuery)
+      : await fetchAllArtists();
     
-    if (planFilter) {
-      query = query.eq('monetization_plan', planFilter);
-    }
-    
-    // Aplicar pesquisa
-    if (searchQuery) {
-      query = query.or(`name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
-    }
-    
-    // Ordenar por nome
-    query = query.order('name');
-    
-    const { data, error } = await query;
-    
-    if (error) {
-      throw error;
-    }
-    
-    return NextResponse.json(data);
+    return NextResponse.json(artists);
   } catch (error) {
-    console.error('Erro ao buscar artistas:', error);
+    console.error('Erro ao listar artistas:', error);
     return NextResponse.json(
-      { error: 'Falha ao buscar artistas' },
+      { error: 'Falha ao listar artistas' },
       { status: 500 }
     );
   }
@@ -61,48 +42,34 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const formData = await request.json() as ArtistFormData;
     
-    // Validação básica
-    if (!body.name || !body.email || !body.genre) {
+    // Validar dados obrigatórios
+    if (!formData.name || !formData.email) {
       return NextResponse.json(
-        { error: 'Nome, email e gênero são obrigatórios' },
+        { error: 'Nome e email são obrigatórios' },
         { status: 400 }
       );
     }
     
-    const now = new Date().toISOString();
-    
-    // Preparar dados para inserção
-    const artistData: Database['public']['Tables']['artists']['Insert'] = {
-      name: body.name,
-      email: body.email,
-      profile_image: body.profileImage || null,
-      genre: body.genre,
-      verified: body.verified || false,
-      joined_date: now,
-      total_tracks: 0,
-      total_revenue: 0,
-      status: body.status || 'active',
-      monetization_plan: body.monetizationPlan || 'basic',
-      payment_method: body.paymentMethod || null,
-      phone_number: body.phoneNumber || null,
-      bio: body.bio || null,
-      created_at: now,
-    };
-    
-    // Inserir no banco de dados
-    const { data, error } = await supabaseAdmin
+    // Verificar se já existe um artista com o mesmo email
+    const { data: existingArtist } = await supabaseAdmin
       .from('artists')
-      .insert(artistData)
-      .select()
+      .select('id')
+      .eq('email', formData.email)
       .single();
     
-    if (error) {
-      throw error;
+    if (existingArtist) {
+      return NextResponse.json(
+        { error: 'Já existe um artista com este email' },
+        { status: 409 }
+      );
     }
     
-    return NextResponse.json(data, { status: 201 });
+    // Criar o artista
+    const newArtist = await createArtist(formData);
+    
+    return NextResponse.json(newArtist, { status: 201 });
   } catch (error) {
     console.error('Erro ao criar artista:', error);
     return NextResponse.json(

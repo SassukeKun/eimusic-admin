@@ -3,28 +3,43 @@ import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 
 /**
- * GET /api/dashboard/top-tracks
- * Busca as faixas mais populares
+ * Interface para faixas populares
  */
-export async function GET() {
+interface TopTrack {
+  id: string;
+  title: string;
+  artist: string;
+  plays: number;
+  revenue: number;
+}
+
+/**
+ * GET /api/dashboard/top-tracks
+ * Busca as faixas mais populares (com mais reproduções)
+ */
+export async function GET(request: Request) {
   try {
+    const { searchParams } = new URL(request.url);
+    const limit = parseInt(searchParams.get('limit') || '5', 10);
+    
+    // Buscar faixas ordenadas por número de reproduções (mais populares primeiro)
     const { data, error } = await supabaseAdmin
       .from('tracks')
       .select('id, title, artist_name, plays, revenue')
       .order('plays', { ascending: false })
-      .limit(5);
-
+      .limit(limit);
+    
     if (error) throw error;
-
-    // Mapear dados para o formato esperado pelo front-end
-    const topTracks = data.map(track => ({
+    
+    // Mapear para o formato da resposta
+    const topTracks: TopTrack[] = (data || []).map(track => ({
       id: track.id,
       title: track.title,
       artist: track.artist_name,
       plays: track.plays,
       revenue: track.revenue,
     }));
-
+    
     return NextResponse.json(topTracks);
   } catch (error) {
     console.error('Erro ao buscar faixas populares:', error);

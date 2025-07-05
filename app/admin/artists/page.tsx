@@ -1,29 +1,30 @@
 // app/admin/artists/page.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Edit, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import { Edit, Trash2, Plus } from 'lucide-react';
 import Image from 'next/image';
 import DataTable from '@/components/admin/DataTable';
 import FilterBar from '@/components/admin/FilterBar';
+import PageHeader from '@/components/admin/PageHeader';
+import Button from '@/components/admin/Button';
 import EditArtistModal from '@/components/ui/EditArtistModal';
 import ConfirmModal from '@/components/ui/ConfirmModal';
 import { useArtists } from '@/hooks/useArtists';
-import { useToast } from '@/components/hooks/useToast';
 import type { FilterConfig } from '@/types/admin';
 import type { ArtistFormData } from '@/types/modal';
 import type { Artist } from '@/types/admin';
 
 export default function ArtistsPage() {
-  const toast = useToast();
   const {
     artists,
     isLoading,
     filters,
     searchQuery,
+    setSearchQuery,
+    fetchArtists,
     updateFilters,
-    updateSearch,
-    resetFilters,
+    clearFilters,
     createArtist,
     updateArtist,
     deleteArtist,
@@ -34,7 +35,7 @@ export default function ArtistsPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [artistToDelete, setArtistToDelete] = useState<Artist | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const itemsPerPage = 8; // Número de itens por página
+  const [editMode, setEditMode] = useState<'create' | 'edit'>('create');
 
   // Configuração dos filtros
   const filterConfigs: FilterConfig[] = [
@@ -45,7 +46,7 @@ export default function ArtistsPage() {
       options: [
         { value: 'active', label: 'Ativo' },
         { value: 'inactive', label: 'Inativo' },
-        { value: 'suspended', label: 'Suspenso' },
+        { value: 'pending', label: 'Pendente' },
       ],
     },
     {
@@ -53,28 +54,19 @@ export default function ArtistsPage() {
       label: 'Verificação',
       type: 'select',
       options: [
-        { value: 'verified', label: 'Verificado' },
-        { value: 'unverified', label: 'Não Verificado' },
+        { value: 'true', label: 'Verificado' },
+        { value: 'false', label: 'Não Verificado' },
       ],
     },
     {
-      key: 'monetizationPlan',
+      key: 'monetization_plan',
       label: 'Plano',
       type: 'select',
       options: [
+        { value: 'free', label: 'Gratuito' },
         { value: 'basic', label: 'Básico' },
         { value: 'premium', label: 'Premium' },
-        { value: 'enterprise', label: 'Enterprise' },
-      ],
-    },
-    {
-      key: 'paymentMethod',
-      label: 'Método de Pagamento',
-      type: 'select',
-      options: [
-        { value: 'mpesa', label: 'M-Pesa' },
-        { value: 'visa', label: 'Visa/Mastercard' },
-        { value: 'paypal', label: 'PayPal' },
+        { value: 'pro', label: 'Profissional' },
       ],
     },
   ];
@@ -89,8 +81,8 @@ export default function ArtistsPage() {
         <div className="flex items-center">
           <div className="flex-shrink-0 h-10 w-10">
             <Image
-              className="h-10 w-10 rounded-full"
-              src={artist.profileImage || 'https://ui-avatars.com/api/?name=Unknown&background=6366f1&color=fff'}
+              className="h-10 w-10 rounded-full object-cover"
+              src={artist.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(artist.name)}&background=6366f1&color=fff`}
               alt={artist.name}
               width={40}
               height={40}
@@ -129,11 +121,12 @@ export default function ArtistsPage() {
       render: (value: unknown) => {
         const plan = String(value);
         const planConfig = {
-          basic: { class: 'bg-gray-100 text-gray-800', text: 'Básico' },
-          premium: { class: 'bg-blue-100 text-blue-800', text: 'Premium' },
-          enterprise: { class: 'bg-purple-100 text-purple-800', text: 'Enterprise' },
+          free: { class: 'bg-gray-100 text-gray-800', text: 'Gratuito' },
+          basic: { class: 'bg-blue-100 text-blue-800', text: 'Básico' },
+          premium: { class: 'bg-purple-100 text-purple-800', text: 'Premium' },
+          pro: { class: 'bg-indigo-100 text-indigo-800', text: 'Profissional' },
         };
-        const config = planConfig[plan as keyof typeof planConfig] || planConfig.basic;
+        const config = planConfig[plan as keyof typeof planConfig] || planConfig.free;
         
         return (
           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.class}`}>
@@ -152,13 +145,15 @@ export default function ArtistsPage() {
         const method = String(value);
         const colors = {
           mpesa: 'bg-green-100 text-green-800',
-          visa: 'bg-blue-100 text-blue-800',
-          paypal: 'bg-yellow-100 text-yellow-800'
+          bank_transfer: 'bg-blue-100 text-blue-800',
+          card: 'bg-purple-100 text-purple-800',
+          cash: 'bg-yellow-100 text-yellow-800'
         };
         const labels = {
           mpesa: 'M-Pesa',
-          visa: 'Visa/MC',
-          paypal: 'PayPal'
+          bank_transfer: 'Transferência',
+          card: 'Cartão',
+          cash: 'Dinheiro'
         };
         
         return (
@@ -181,44 +176,9 @@ export default function ArtistsPage() {
       sortable: true,
       render: (value: unknown) => (
         <span className="text-green-600 font-medium">
-          MT {Number(value).toLocaleString('pt-MZ')}
+          MT {Number(value || 0).toLocaleString('pt-MZ')}
         </span>
       ),
-    },
-    {
-      key: 'lastPaymentDate' as keyof Artist,
-      label: 'Último Pagamento',
-      sortable: true,
-      render: (value: unknown) => {
-        if (!value) return <span className="text-gray-400">-</span>;
-        
-        const date = new Date(String(value));
-        const now = new Date();
-        const diffTime = Math.abs(now.getTime() - date.getTime());
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        
-        let timeAgo = '';
-        if (diffDays === 1) {
-          timeAgo = 'ontem';
-        } else if (diffDays < 7) {
-          timeAgo = `${diffDays} dias atrás`;
-        } else if (diffDays < 30) {
-          timeAgo = `${Math.floor(diffDays / 7)} semanas atrás`;
-        } else {
-          timeAgo = date.toLocaleDateString('pt-MZ');
-        }
-        
-        return (
-          <div>
-            <div className="text-sm text-gray-900">
-              {date.toLocaleDateString('pt-MZ')}
-            </div>
-            <div className="text-xs text-gray-500">
-              {timeAgo}
-            </div>
-          </div>
-        );
-      },
     },
     {
       key: 'status' as keyof Artist,
@@ -229,7 +189,7 @@ export default function ArtistsPage() {
         const statusConfig = {
           active: { class: 'bg-green-100 text-green-800', text: 'Ativo' },
           inactive: { class: 'bg-yellow-100 text-yellow-800', text: 'Inativo' },
-          suspended: { class: 'bg-red-100 text-red-800', text: 'Suspenso' },
+          pending: { class: 'bg-blue-100 text-blue-800', text: 'Pendente' },
         };
         const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.inactive;
         
@@ -250,10 +210,10 @@ export default function ArtistsPage() {
               e.stopPropagation();
               handleEditClick(artist);
             }}
-            className="text-blue-600 hover:text-blue-900"
-            aria-label="Editar artista"
+            className="text-indigo-600 hover:text-indigo-900"
+            title="Editar"
           >
-            <Edit className="size-4" />
+            <Edit className="h-4 w-4" />
           </button>
           <button
             onClick={(e) => {
@@ -261,9 +221,9 @@ export default function ArtistsPage() {
               handleDeleteClick(artist);
             }}
             className="text-red-600 hover:text-red-900"
-            aria-label="Excluir artista"
+            title="Excluir"
           >
-            <Trash2 className="size-4" />
+            <Trash2 className="h-4 w-4" />
           </button>
         </div>
       ),
@@ -275,20 +235,22 @@ export default function ArtistsPage() {
   };
 
   const handleSearchChange = (query: string) => {
-    updateSearch(query);
+    setSearchQuery(query);
   };
 
   const handleResetFilters = () => {
-    resetFilters();
+    clearFilters();
   };
 
-  const handleRowClick = (artist: Artist) => {
-    setSelectedArtist(artist);
+  const handleAddNewClick = () => {
+    setSelectedArtist(null);
+    setEditMode('create');
     setIsEditModalOpen(true);
   };
 
   const handleEditClick = (artist: Artist) => {
     setSelectedArtist(artist);
+    setEditMode('edit');
     setIsEditModalOpen(true);
   };
 
@@ -301,22 +263,13 @@ export default function ArtistsPage() {
     setIsSubmitting(true);
     
     try {
-      if (selectedArtist?.id) {
-        // Atualizar artista existente
-        const updated = await updateArtist(selectedArtist.id, formData);
-        if (updated) {
-          setIsEditModalOpen(false);
-        }
-      } else {
-        // Criar novo artista
-        const created = await createArtist(formData);
-        if (created) {
-          setIsEditModalOpen(false);
-        }
+      if (editMode === 'create') {
+        await createArtist(formData);
+      } else if (selectedArtist) {
+        await updateArtist(selectedArtist.id, formData);
       }
-    } catch (error) {
-      console.error('Erro ao salvar artista:', error);
-      toast.error('Ocorreu um erro ao salvar o artista');
+      
+      setIsEditModalOpen(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -328,87 +281,85 @@ export default function ArtistsPage() {
     setIsSubmitting(true);
     
     try {
-      const success = await deleteArtist(artistToDelete.id);
-      if (success) {
-        setIsDeleteModalOpen(false);
-        setArtistToDelete(null);
-      }
-    } catch (error) {
-      console.error('Erro ao excluir artista:', error);
-      toast.error('Ocorreu um erro ao excluir o artista');
+      await deleteArtist(artistToDelete.id);
+      setIsDeleteModalOpen(false);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // Converter o artista selecionado para o formato do formulário
+  const selectedArtistFormData: ArtistFormData | undefined = selectedArtist
+    ? {
+        name: selectedArtist.name,
+        email: selectedArtist.email,
+        phone: selectedArtist.phoneNumber || '',
+        bio: selectedArtist.bio || '',
+        genre: selectedArtist.genre || '',
+        status: selectedArtist.status,
+        isActive: selectedArtist.status === 'active',
+        verified: selectedArtist.verified,
+        monetizationPlan: selectedArtist.monetizationPlan,
+        paymentMethod: selectedArtist.paymentMethod,
+      }
+    : undefined;
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Artistas</h1>
-        <button
-          onClick={() => {
-            setSelectedArtist(null);
-            setIsEditModalOpen(true);
-          }}
-          className="btn-primary"
+    <div>
+      <PageHeader
+        title="Artistas"
+        description="Gerencie os artistas da plataforma EiMusic."
+      />
+      
+      <div className="mb-6 flex justify-between items-center">
+        <FilterBar
+          filters={filterConfigs}
+          activeFilters={filters}
+          searchQuery={searchQuery}
+          onFilterChange={handleFilterChange}
+          onSearchChange={handleSearchChange}
+          onResetFilters={handleResetFilters}
+        />
+        
+        <Button
+          onClick={handleAddNewClick}
+          variant="primary"
+          className="ml-4"
         >
+          <Plus className="h-4 w-4 mr-2" />
           Novo Artista
-        </button>
+        </Button>
       </div>
       
-      <FilterBar
-        filters={filterConfigs}
-        activeFilters={filters}
-        searchQuery={searchQuery}
-        onFilterChange={handleFilterChange}
-        onSearchChange={handleSearchChange}
-        onResetFilters={handleResetFilters}
-      />
-      
       <DataTable
-        data={artists}
         columns={columns}
-        onRowClick={handleRowClick}
-        itemsPerPage={itemsPerPage}
+        data={artists}
+        isLoading={isLoading}
+        onRowClick={() => {}}
       />
       
-      {isEditModalOpen && (
-        <EditArtistModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          onSave={handleSaveArtist}
-          artist={selectedArtist ? {
-            id: selectedArtist.id,
-            name: selectedArtist.name,
-            email: selectedArtist.email,
-            bio: '',
-            genre: selectedArtist.genre,
-            monetizationPlan: selectedArtist.monetizationPlan,
-            paymentMethod: selectedArtist.paymentMethod || 'mpesa',
-            phoneNumber: selectedArtist.phoneNumber,
-            verified: selectedArtist.verified,
-            isActive: selectedArtist.status === 'active',
-            receiveNotifications: true,
-            allowPublicProfile: true,
-          } : undefined}
-          loading={isSubmitting}
-          mode={selectedArtist ? 'edit' : 'create'}
-        />
-      )}
+      {/* Modal de edição */}
+      <EditArtistModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSaveArtist}
+        artist={selectedArtistFormData}
+        loading={isSubmitting}
+        mode={editMode}
+      />
       
-      {isDeleteModalOpen && artistToDelete && (
-        <ConfirmModal
-          isOpen={isDeleteModalOpen}
-          onClose={() => setIsDeleteModalOpen(false)}
-          onConfirm={handleDeleteConfirm}
-          title="Excluir Artista"
-          message={`Tem certeza que deseja excluir o artista ${artistToDelete.name}? Esta ação não pode ser desfeita.`}
-          confirmText="Excluir"
-          cancelText="Cancelar"
-          variant="danger"
-          loading={isSubmitting}
-        />
-      )}
+      {/* Modal de confirmação de exclusão */}
+      <ConfirmModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteConfirm}
+        title="Excluir Artista"
+        message={`Tem certeza que deseja excluir o artista "${artistToDelete?.name}"? Esta ação não pode ser desfeita.`}
+        confirmText="Excluir"
+        cancelText="Cancelar"
+        variant="danger"
+        loading={isSubmitting}
+      />
     </div>
   );
 }

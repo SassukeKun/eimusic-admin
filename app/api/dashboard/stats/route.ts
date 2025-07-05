@@ -30,24 +30,76 @@ export async function GET() {
 
     if (tracksError) throw tracksError;
 
+    // Buscar total de vídeos
+    const { count: totalVideos, error: videosError } = await supabaseAdmin
+      .from('videos')
+      .select('*', { count: 'exact', head: true });
+
+    if (videosError) throw videosError;
+
     // Buscar soma de receitas (das transações)
     const { data: revenueData, error: revenueError } = await supabaseAdmin
-      .from('transactions')
+      .from('revenue_transactions')
       .select('amount')
       .not('status', 'eq', 'refunded');
 
     if (revenueError) throw revenueError;
 
     // Calcular receita total
-    const totalRevenue = revenueData.reduce((sum, transaction) => sum + transaction.amount, 0);
+    const totalRevenue = revenueData?.reduce((sum, transaction) => sum + transaction.amount, 0) || 0;
 
-    // Calcular crescimento mensal (simplificado)
+    // Buscar dados do mês atual para cálculo de crescimento
+    const currentDate = new Date();
+    const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).toISOString();
+    
+    // Usuários criados este mês
+    const { count: newUsersThisMonth, error: newUsersError } = await supabaseAdmin
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', firstDayOfMonth);
+
+    if (newUsersError) throw newUsersError;
+
+    // Artistas criados este mês
+    const { count: newArtistsThisMonth, error: newArtistsError } = await supabaseAdmin
+      .from('artists')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', firstDayOfMonth);
+
+    if (newArtistsError) throw newArtistsError;
+
+    // Faixas criadas este mês
+    const { count: newTracksThisMonth, error: newTracksError } = await supabaseAdmin
+      .from('tracks')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', firstDayOfMonth);
+
+    if (newTracksError) throw newTracksError;
+
+    // Receita deste mês
+    const { data: revenueThisMonth, error: revenueThisMonthError } = await supabaseAdmin
+      .from('revenue_transactions')
+      .select('amount')
+      .gte('date', firstDayOfMonth)
+      .not('status', 'eq', 'refunded');
+
+    if (revenueThisMonthError) throw revenueThisMonthError;
+
+    const totalRevenueThisMonth = revenueThisMonth?.reduce((sum, transaction) => sum + transaction.amount, 0) || 0;
+
+    // Calcular crescimento mensal
     // Em um cenário real, você compararia com o mês anterior
+    // Aqui estamos calculando a porcentagem de novos itens em relação ao total
+    const calculateGrowth = (newItems: number, totalItems: number) => {
+      if (totalItems === 0) return 0;
+      return parseFloat(((newItems / totalItems) * 100).toFixed(1));
+    };
+
     const monthlyGrowth = {
-      users: 5.2,    // Exemplo - seria calculado com base em dados reais
-      artists: 3.8,   // Exemplo - seria calculado com base em dados reais
-      tracks: 7.5,    // Exemplo - seria calculado com base em dados reais
-      revenue: 8.9,   // Exemplo - seria calculado com base em dados reais
+      users: calculateGrowth(newUsersThisMonth || 0, totalUsers || 1),
+      artists: calculateGrowth(newArtistsThisMonth || 0, totalArtists || 1),
+      tracks: calculateGrowth(newTracksThisMonth || 0, totalTracks || 1),
+      revenue: totalRevenue > 0 ? parseFloat(((totalRevenueThisMonth / totalRevenue) * 100).toFixed(1)) : 0,
     };
 
     // Montar objeto de estatísticas
@@ -55,6 +107,7 @@ export async function GET() {
       totalUsers: totalUsers || 0,
       totalArtists: totalArtists || 0,
       totalTracks: totalTracks || 0,
+      totalVideos: totalVideos || 0,
       totalRevenue: totalRevenue || 0,
       monthlyGrowth,
     };
