@@ -38,16 +38,22 @@ SUPABASE_SERVICE_ROLE_KEY=sua_chave_de_servico_do_supabase
 
 # Cloudinary
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=seu_cloud_name
-CLOUDINARY_API_KEY=sua_api_key
-CLOUDINARY_API_SECRET=seu_api_secret
+NEXT_PUBLIC_CLOUDINARY_API_KEY=sua_api_key
+NEXT_PUBLIC_CLOUDINARY_API_SECRET=seu_api_secret
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=seu_upload_preset
 ```
 
-4. Inicie o servidor de desenvolvimento:
+4. Alternativamente, você pode usar o script auxiliar para adicionar a chave de serviço:
+```bash
+node scripts/add-service-key.js
+```
+
+5. Inicie o servidor de desenvolvimento:
 ```bash
 npm run dev
 ```
 
-5. Acesse o painel em [http://localhost:3000](http://localhost:3000)
+6. Acesse o painel em [http://localhost:3000](http://localhost:3000)
 
 ## Estrutura do Projeto
 
@@ -82,6 +88,23 @@ npm run dev
 - `npm run build` - Compila o projeto para produção
 - `npm start` - Inicia o servidor de produção
 - `npm run lint` - Executa a verificação de linting
+
+## Solução de Problemas
+
+### Erro "Failed to fetch"
+
+Se você encontrar erros "Failed to fetch" ao acessar as rotas da API:
+
+1. Verifique se a chave `SUPABASE_SERVICE_ROLE_KEY` está configurada no arquivo `.env.local`
+2. Use o script `scripts/add-service-key.js` para adicionar a chave:
+   ```bash
+   node scripts/add-service-key.js
+   ```
+3. Reinicie o servidor de desenvolvimento após adicionar a chave
+
+### Página de Login
+
+A página de login está disponível em `/admin/login`. Se você estiver na página inicial, será redirecionado automaticamente para a página de login.
 
 ### Integração com a Plataforma Principal
 

@@ -8,6 +8,7 @@ import type { User, Session } from '@supabase/supabase-js';
 // Lista de emails com permissão de administrador
 const ADMIN_EMAILS = [
   'admin@eimusic.co.mz',
+  'allenvictor33@gmail.com',
   'damonsalvatoreeee@gmail.com',
   // Adicione outros emails de administradores conforme necessário
 ];
