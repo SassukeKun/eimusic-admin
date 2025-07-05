@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import Image from 'next/image';
@@ -15,7 +15,8 @@ export default function ResetPasswordPage() {
   const [validSession, setValidSession] = useState(false);
   
   const router = useRouter();
-  const supabase = createClientComponentClient();
+  // Memoize to keep a stable reference
+  const supabase = useMemo(() => createClientComponentClient(), []);
   
   useEffect(() => {
     const checkSession = async () => {

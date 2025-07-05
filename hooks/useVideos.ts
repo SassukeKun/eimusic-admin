@@ -21,7 +21,7 @@ export function useVideos(options: UseVideosOptions = {}) {
     artistId ? { artist_id: artistId } : {}
   );
   const [searchQuery, setSearchQuery] = useState('');
-  const api = useApi<Video | Video[]>();
+  const { get: apiGet, remove: apiRemove } = useApi<Video | Video[]>();
   const toast = useToast();
 
   /**
@@ -47,7 +47,7 @@ export function useVideos(options: UseVideosOptions = {}) {
       
       const url = `/api/videos${params.toString() ? `?${params.toString()}` : ''}`;
       
-      const data = await api.get(url);
+      const data = await apiGet(url);
       setVideos(Array.isArray(data) ? data : []);
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
@@ -56,20 +56,20 @@ export function useVideos(options: UseVideosOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [api, filters, searchQuery, toast]);
+  }, [apiGet, filters, searchQuery, toast]);
 
   /**
    * Carrega um vídeo pelo ID
    */
   const getVideo = useCallback(async (id: string): Promise<Video | null> => {
     try {
-      const data = await api.get(`/api/videos/${id}`);
+      const data = await apiGet(`/api/videos/${id}`);
       return data as Video;
     } catch (error) {
       toast.error('Erro ao carregar vídeo');
       return null;
     }
-  }, [api, toast]);
+  }, [apiGet, toast]);
 
   /**
    * Cria um novo vídeo
@@ -166,7 +166,7 @@ export function useVideos(options: UseVideosOptions = {}) {
    */
   const deleteVideo = useCallback(async (id: string): Promise<boolean> => {
     try {
-      await api.remove(`/api/videos/${id}`);
+      await apiRemove(`/api/videos/${id}`);
       
       // Atualizar lista de vídeos
       setVideos(prev => prev.filter(video => video.id !== id));
@@ -177,7 +177,7 @@ export function useVideos(options: UseVideosOptions = {}) {
       toast.error('Erro ao excluir vídeo');
       return false;
     }
-  }, [api, toast]);
+  }, [apiRemove, toast]);
 
   /**
    * Atualiza os filtros

@@ -1,6 +1,6 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { useRouter } from 'next/navigation';
 import type { User, Session } from '@supabase/supabase-js';
@@ -35,7 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClientComponentClient();
+  // Memoize the client so its reference stays stable across renders
+  const supabase = useMemo(() => createClientComponentClient(), []);
   const router = useRouter();
 
   useEffect(() => {

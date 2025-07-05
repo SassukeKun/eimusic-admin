@@ -21,7 +21,7 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
     artistId ? { artist_id: artistId } : {}
   );
   const [searchQuery, setSearchQuery] = useState('');
-  const api = useApi<Album | Album[]>();
+  const { get: apiGet, remove: apiRemove } = useApi<Album | Album[]>();
   const toast = useToast();
 
   /**
@@ -47,7 +47,7 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
       
       const url = `/api/albums${params.toString() ? `?${params.toString()}` : ''}`;
       
-      const data = await api.get(url);
+      const data = await apiGet(url);
       setAlbums(Array.isArray(data) ? data : []);
     } catch (error) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
@@ -56,20 +56,20 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
     } finally {
       setIsLoading(false);
     }
-  }, [api, filters, searchQuery, toast]);
+  }, [apiGet, filters, searchQuery, toast]);
 
   /**
    * Carrega um álbum pelo ID
    */
   const getAlbum = useCallback(async (id: string): Promise<Album | null> => {
     try {
-      const data = await api.get(`/api/albums/${id}`);
+      const data = await apiGet(`/api/albums/${id}`);
       return data as Album;
     } catch (error) {
       toast.error('Erro ao carregar álbum');
       return null;
     }
-  }, [api, toast]);
+  }, [apiGet, toast]);
 
   /**
    * Cria um novo álbum
@@ -160,7 +160,7 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
    */
   const deleteAlbum = useCallback(async (id: string): Promise<boolean> => {
     try {
-      await api.remove(`/api/albums/${id}`);
+      await apiRemove(`/api/albums/${id}`);
       
       // Atualizar lista de álbuns
       setAlbums(prev => prev.filter(album => album.id !== id));
@@ -171,7 +171,7 @@ export function useAlbums(options: UseAlbumsOptions = {}) {
       toast.error('Erro ao excluir álbum');
       return false;
     }
-  }, [api, toast]);
+  }, [apiRemove, toast]);
 
   /**
    * Atualiza os filtros

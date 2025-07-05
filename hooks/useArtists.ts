@@ -1,205 +1,209 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useApi } from './useApi';
-import { useToast } from '@/components/hooks/useToast';
-import type { Artist } from '@/types/admin';
-import type { ArtistFormData } from '@/types/modal';
+// src/hooks/useArtists.ts
 
-interface UseArtistsOptions {
-  autoFetch?: boolean;
-  initialFilters?: Record<string, string>;
+import { useState, useEffect, useCallback } from 'react';
+
+// Interface para artista conforme estrutura real do banco
+export interface Artist {
+  id: string;
+  name: string;
+  email: string;
+  verified: boolean;
+  created_at: string;
+  profile_image_url: string | null;
+  bio: string | null;
+  phone: string | null;
 }
 
-/**
- * Hook para gerenciar artistas
- */
-export function useArtists(options: UseArtistsOptions = {}) {
-  const { autoFetch = true, initialFilters = {} } = options;
+export function useArtists() {
   const [artists, setArtists] = useState<Artist[]>([]);
-  const [filters, setFilters] = useState<Record<string, string>>(initialFilters);
-  const [searchQuery, setSearchQuery] = useState<string>('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<Error | null>(null);
-  const [selectedArtist, setSelectedArtist] = useState<Artist | null>(null);
-  const api = useApi<Artist | Artist[]>();
-  const toast = useToast();
-
-  /**
-   * Busca todos os artistas com filtros aplicados
-   */
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  
+  // Buscar todos os artistas
   const fetchArtists = useCallback(async () => {
     setIsLoading(true);
     setError(null);
-
+    
     try {
-      // Construir URL com parâmetros de consulta
-      const url = new URL('/api/artists', window.location.origin);
+      const queryParams = searchQuery ? `?query=${encodeURIComponent(searchQuery)}` : '';
+      const response = await fetch(`/api/artists${queryParams}`);
       
-      // Adicionar filtros à URL
-      Object.entries(filters).forEach(([key, value]) => {
-        if (value) url.searchParams.append(key, value);
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+        
+        // Tentar extrair a mensagem de erro do JSON
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || `Erro ${response.status}`;
+        } catch {
+          // Se não for JSON, usar o texto bruto (limitado para não sobrecarregar a UI)
+          errorMessage = errorText.slice(0, 100) + (errorText.length > 100 ? '...' : '');
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      // Parsear a resposta como JSON
+      const data = await response.json();
+      
+      // Verificar se temos um array
+      if (Array.isArray(data)) {
+        setArtists(data);
+      } else if (data && typeof data === 'object' && data.error) {
+        throw new Error(data.error);
+      } else {
+        console.warn('Formato de resposta inesperado:', data);
+        setArtists([]);
+      }
+      
+    } catch (err) {
+      console.error('Erro ao buscar artistas:', err);
+      setError(err instanceof Error ? err.message : 'Erro desconhecido');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery]);
+  
+  // Carregar artistas ao iniciar
+  useEffect(() => {
+    fetchArtists();
+  }, [fetchArtists]);
+  
+  // Atualizar lista
+  const refreshArtists = useCallback(async () => {
+    setIsRefreshing(true);
+    await fetchArtists();
+    setIsRefreshing(false);
+  }, [fetchArtists]);
+  
+  // Criar artista
+  const createArtist = useCallback(async (artistData: Partial<Artist>) => {
+    try {
+      const response = await fetch('/api/artists', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(artistData),
       });
       
-      // Adicionar termo de busca se houver
-      if (searchQuery) {
-        url.searchParams.append('search', searchQuery);
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || `Erro ${response.status}`;
+        } catch {
+          errorMessage = `Erro ${response.status}: ${errorText.slice(0, 100)}`;
+        }
+        
+        throw new Error(errorMessage);
       }
       
-      // Fazer a requisição
-      const data = await api.get(url.toString());
-      setArtists(data as Artist[]);
-      return data as Artist[];
+      const newArtist = await response.json();
+      await refreshArtists();
+      return newArtist;
+      
     } catch (err) {
-      const error = err instanceof Error ? err : new Error('Erro ao buscar artistas');
-      setError(error);
-      toast.error('Falha ao carregar artistas');
-      return [];
-    } finally {
-      setIsLoading(false);
+      console.error('Erro ao criar artista:', err);
+      throw err;
     }
-  }, [api, filters, searchQuery, toast]);
-
-  /**
-   * Busca um artista pelo ID
-   */
-  const fetchArtistById = useCallback(async (id: string) => {
-    setIsLoading(true);
-    setError(null);
-
+  }, [refreshArtists]);
+  
+  // Atualizar artista
+  const updateArtist = useCallback(async (artistData: Artist) => {
     try {
-      const data = await api.get(`/api/artists/${id}`);
-      setSelectedArtist(data as Artist);
-      return data as Artist;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error(`Erro ao buscar artista ${id}`);
-      setError(error);
-      toast.error('Falha ao carregar detalhes do artista');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [api, toast]);
-
-  /**
-   * Cria um novo artista
-   */
-  const createArtist = useCallback(async (formData: ArtistFormData) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const data = await api.post('/api/artists', formData);
-      toast.success('Artista criado com sucesso');
+      const response = await fetch('/api/artists', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(artistData),
+      });
       
-      // Atualizar a lista de artistas
-      await fetchArtists();
-      
-      return data as Artist;
-    } catch (err) {
-      const error = err instanceof Error ? err : new Error('Erro ao criar artista');
-      setError(error);
-      toast.error('Falha ao criar artista');
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  }, [api, fetchArtists, toast]);
-
-  /**
-   * Atualiza um artista existente
-   */
-  const updateArtist = useCallback(async (id: string, formData: ArtistFormData) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const data = await api.patch(`/api/artists/${id}`, formData);
-      toast.success('Artista atualizado com sucesso');
-      
-      // Atualizar a lista de artistas
-      await fetchArtists();
-      
-      // Atualizar o artista selecionado se for o mesmo
-      if (selectedArtist?.id === id) {
-        setSelectedArtist(data as Artist);
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || `Erro ${response.status}`;
+        } catch {
+          errorMessage = `Erro ${response.status}: ${errorText.slice(0, 100)}`;
+        }
+        
+        throw new Error(errorMessage);
       }
       
-      return data as Artist;
+      const updatedArtist = await response.json();
+      await refreshArtists();
+      return updatedArtist;
+      
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(`Erro ao atualizar artista ${id}`);
-      setError(error);
-      toast.error('Falha ao atualizar artista');
-      return null;
-    } finally {
-      setIsLoading(false);
+      console.error('Erro ao atualizar artista:', err);
+      throw err;
     }
-  }, [api, fetchArtists, selectedArtist, toast]);
-
-  /**
-   * Exclui um artista
-   */
+  }, [refreshArtists]);
+  
+  // Excluir artista
   const deleteArtist = useCallback(async (id: string) => {
-    setIsLoading(true);
-    setError(null);
-
     try {
-      await api.remove(`/api/artists/${id}`);
-      toast.success('Artista excluído com sucesso');
+      const response = await fetch(`/api/artists?id=${id}`, {
+        method: 'DELETE',
+      });
       
-      // Atualizar a lista de artistas
-      await fetchArtists();
-      
-      // Limpar o artista selecionado se for o mesmo
-      if (selectedArtist?.id === id) {
-        setSelectedArtist(null);
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorMessage;
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMessage = errorJson.error || `Erro ${response.status}`;
+        } catch {
+          errorMessage = `Erro ${response.status}: ${errorText.slice(0, 100)}`;
+        }
+        
+        throw new Error(errorMessage);
       }
       
+      await refreshArtists();
       return true;
+      
     } catch (err) {
-      const error = err instanceof Error ? err : new Error(`Erro ao excluir artista ${id}`);
-      setError(error);
-      toast.error('Falha ao excluir artista');
-      return false;
-    } finally {
-      setIsLoading(false);
+      console.error('Erro ao excluir artista:', err);
+      throw err;
     }
-  }, [api, fetchArtists, selectedArtist, toast]);
-
-  /**
-   * Atualiza os filtros
-   */
-  const updateFilters = useCallback((newFilters: Record<string, string>) => {
-    setFilters(prev => ({ ...prev, ...newFilters }));
-  }, []);
-
-  /**
-   * Limpa os filtros
-   */
-  const clearFilters = useCallback(() => {
-    setFilters({});
-    setSearchQuery('');
-  }, []);
-
-  // Carregar artistas automaticamente se autoFetch for true
-  useEffect(() => {
-    if (autoFetch) {
-      fetchArtists();
+  }, [refreshArtists]);
+  
+  // Diagnosticar problemas de conexão
+  const runDiagnostics = useCallback(async () => {
+    try {
+      const response = await fetch('/api/test-supabase');
+      if (!response.ok) {
+        throw new Error(`Erro ${response.status} ao executar diagnóstico`);
+      }
+      return await response.json();
+    } catch (err) {
+      console.error('Erro ao executar diagnóstico:', err);
+      throw err;
     }
-  }, [autoFetch, fetchArtists]);
-
+  }, []);
+  
   return {
     artists,
-    selectedArtist,
     isLoading,
     error,
-    filters,
     searchQuery,
     setSearchQuery,
-    fetchArtists,
-    fetchArtistById,
+    refreshArtists,
+    isRefreshing,
     createArtist,
     updateArtist,
     deleteArtist,
-    updateFilters,
-    clearFilters,
+    runDiagnostics
   };
-} 
+}
