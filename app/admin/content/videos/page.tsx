@@ -66,6 +66,7 @@ export default function VideosPage() {
   // Aplicar filtros sempre que videos ou filtros mudarem
   useEffect(() => {
     applyFilters();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [videos, searchQuery, selectedGenre, selectedType, dateFrom, dateTo]);
 
   // Função para aplicar filtros
