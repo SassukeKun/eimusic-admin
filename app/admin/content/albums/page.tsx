@@ -326,6 +326,7 @@ export default function AlbumsPage() {
               {/* Imagem da capa */}
               <div className="relative w-full h-48 bg-gradient-to-br from-gray-100 to-gray-200">
                 {album.coverArt ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img 
                     src={album.coverArt} 
                     alt={album.title}

@@ -2,7 +2,7 @@
 import '../globals.css';
 import { Metadata } from 'next';
 import Sidebar from '@/components/admin/Sidebar';
-import { Header } from '@/components/admin/PageHeader';
+import PageHeader from '@/components/admin/PageHeader';
 import { ToastProvider } from '@/components/ui/contexts/ToastContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 
@@ -26,7 +26,7 @@ export default function AdminLayout({ children }: AdminLayoutProps) {
           {/* Main content */}
           <div className="flex-1 flex flex-col overflow-hidden">
             {/* Header */}
-            <Header />
+            <PageHeader title="Painel Administrativo" />
             
             {/* Page content */}
             <main className="flex-1 overflow-y-auto p-6">

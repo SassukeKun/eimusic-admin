@@ -26,15 +26,7 @@ export interface AdminUser {
   lastLogin: string;
 }
 
-// Artist types - ATUALIZADO com campos de pagamento
-// types/admin.ts - ARTIST INTERFACE CORRIGIDA COMPLETAMENTE
-/**
- * INTERFACE ARTIST - CAMPOS REAIS DA TABELA
- * 
- * Estrutura REAL baseada na tabela artists:
- * id, name, email, bio, phone, monetization_plan_id, 
- * profile_image_url, social_links, created_at
- */
+
 export interface Artist {
   id: string;
   name: string;
@@ -60,12 +52,7 @@ export interface Artist {
   status?: 'active' | 'pending' | 'inactive';
 }
 
-// types/modal.ts - ARTISTFORMDATA CORRIGIDA COMPLETAMENTE
-/**
- * DADOS DO FORMULÁRIO DE ARTISTA
- * 
- * Interface que corresponde EXATAMENTE aos campos reais da tabela
- */
+
 export interface ArtistFormData {
   name: string;                     // Campo obrigatório
   email: string;                    // Campo obrigatório
@@ -188,6 +175,28 @@ export interface DashboardStats {
     revenue: number;
   };
 }
+
+export interface Video {
+  id: string;
+  title: string;
+  description?: string;
+  duration: number; // em segundos
+  thumbnailUrl?: string;
+  videoUrl: string;
+  artist_id: string;
+  artistName: string; // Campo calculado/joined
+  uploadDate: string;
+  views: number;
+  status: 'published' | 'draft' | 'removed';
+  created_at: string;
+  updated_at: string;
+}
+
+
+
+
+
+
 
 // Table types
 export interface TableColumn<T> {
