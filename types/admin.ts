@@ -27,25 +27,23 @@ export interface AdminUser {
 }
 
 // Artist types - ATUALIZADO com campos de pagamento
+// types/admin.ts - ARTIST INTERFACE CORRIGIDA COMPLETAMENTE
+/**
+ * INTERFACE ARTIST - CAMPOS REAIS DA TABELA
+ * 
+ * Estrutura REAL baseada na tabela artists:
+ * id, name, email, bio, phone, monetization_plan_id, 
+ * profile_image_url, social_links, created_at
+ */
 export interface Artist {
   id: string;
   name: string;
   email: string;
-  phone?: string;
-  bio?: string;
-  genre?: string;
-  country?: string;
-  city?: string;
-  status: 'active' | 'pending' | 'inactive';
-  joinDate: string;
-  totalTracks?: number;
-  totalAlbums?: number;
-  totalVideos?: number;
-  totalPlays?: number;
-  totalRevenue?: number;
-  avatarUrl?: string;
-  bannerUrl?: string;
-  socialLinks?: {
+  bio?: string;                     // Campo opcional na tabela
+  phone?: string;                   // Campo opcional (mantido para histórico)
+  monetizationPlanId?: string;      // monetization_plan_id
+  profileImageUrl?: string;         // profile_image_url
+  socialLinks?: {                   // social_links (JSON field)
     instagram?: string;
     twitter?: string;
     facebook?: string;
@@ -53,15 +51,80 @@ export interface Artist {
     spotify?: string;
     website?: string;
   };
-  profileImage?: string;
-  verified: boolean;
-  joinedDate: string;
-  totalEarnings?: number; // Total ganho historicamente
-  monetizationPlan: MonetizationPlan;
-  // NOVOS CAMPOS DE PAGAMENTO
-  paymentMethod?: PaymentMethod;
-  phoneNumber?: string; // Para M-Pesa
-  lastPaymentDate?: string;
+  createdAt: string;               // created_at
+  
+  // Campos calculados/derivados (não existem na tabela real)
+  // Podem vir de JOINs ou cálculos agregados futuros
+  totalTracks?: number;
+  totalRevenue?: number;
+  status?: 'active' | 'pending' | 'inactive';
+}
+
+// types/modal.ts - ARTISTFORMDATA CORRIGIDA COMPLETAMENTE
+/**
+ * DADOS DO FORMULÁRIO DE ARTISTA
+ * 
+ * Interface que corresponde EXATAMENTE aos campos reais da tabela
+ */
+export interface ArtistFormData {
+  name: string;                     // Campo obrigatório
+  email: string;                    // Campo obrigatório
+  bio?: string;                     // Campo opcional
+  phone?: string;                   // Campo opcional (para histórico)
+  monetizationPlanId?: string;      // monetization_plan_id
+  profileImageUrl?: string;         // profile_image_url atual
+  socialLinks?: {                   // social_links (JSON)
+    instagram?: string;
+    twitter?: string;
+    facebook?: string;
+    youtube?: string;
+    spotify?: string;
+    website?: string;
+  };
+  
+  // Campo para upload de nova imagem
+  profileImageFile?: File;
+}
+
+// types/database.ts - SEÇÃO ARTISTS CORRIGIDA COMPLETAMENTE
+export interface Database {
+  public: {
+    Tables: {
+      artists: {
+        Row: {
+          id: string;
+          name: string;
+          email: string;
+          bio: string | null;
+          phone: string | null;
+          monetization_plan_id: string | null;
+          profile_image_url: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          email: string;
+          bio?: string | null;
+          phone?: string | null;
+          monetization_plan_id?: string | null;
+          profile_image_url?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          email?: string;
+          bio?: string | null;
+          phone?: string | null;
+          monetization_plan_id?: string | null;
+          profile_image_url?: string | null;
+          created_at?: string;
+        };
+      };
+      // ... outras tabelas permanecem iguais
+    };
+  };
 }
 
 // User types - ATUALIZADO com campos de pagamento  

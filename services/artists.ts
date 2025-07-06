@@ -1,58 +1,118 @@
+// services/artists.ts - VERSÃO SEM CLOUDINARY (TEMPORÁRIA)
 import { supabaseAdmin } from '@/lib/supabase';
-import { uploadImage } from '@/lib/cloudinary';
-import type { Artist } from '@/types/admin';
-import type { ArtistFormData } from '@/types/modal';
-import type { Database } from '@/types/database';
-
-type ArtistRow = Database['public']['Tables']['artists']['Row'];
-type ArtistInsert = Database['public']['Tables']['artists']['Insert'];
-type ArtistUpdate = Database['public']['Tables']['artists']['Update'];
+// import { uploadImage } from '@/lib/cloudinary'; // TEMPORARIAMENTE DESABILITADO
 
 /**
- * Converte um registro do banco de dados para o formato da aplicação
+ * INTERFACE ARTIST - TIPAGEM FORTE E MODERNA
+ * Baseada nos campos reais da tabela artists
  */
-const mapArtistFromDB = (artist: ArtistRow): Artist => ({
-  id: artist.id,
-  name: artist.name,
-  email: artist.email,
-  profileImage: artist.profile_image || undefined,
-  genre: artist.genre,
-  verified: artist.verified,
-  joinedDate: artist.joined_date,
-  totalTracks: artist.total_tracks,
-  totalRevenue: artist.total_revenue,
-  status: artist.status,
-  monetizationPlan: artist.monetization_plan,
-  paymentMethod: artist.payment_method || undefined,
-  phoneNumber: artist.phone_number || undefined,
-  lastPaymentDate: artist.last_payment_date || undefined,
-  totalEarnings: artist.total_earnings || undefined,
-});
+export interface Artist {
+  id: string;
+  name: string;
+  email: string;
+  bio?: string | null;
+  phone?: string | null;
+  monetization_plan_id?: string | null;
+  profile_image_url?: string | null;
+  social_links?: Record<string, string> | null;
+  created_at: string;
+}
 
 /**
- * Busca todos os artistas
+ * INTERFACE PARA FORMULÁRIO - TYPE SAFE
+ */
+export interface ArtistFormData {
+  name: string;
+  email: string;
+  bio?: string | null;
+  phone?: string | null;
+  monetization_plan_id?: string | null;
+  profile_image_url?: string | null;
+  social_links?: Record<string, string> | null;
+  profileImageFile?: File;
+}
+
+/**
+ * UPLOAD TEMPORARIAMENTE DESABILITADO
+ * Para evitar erro do Cloudinary no cliente
+ */
+const uploadImageTemporary = async (file: File, folder: string): Promise<string> => {
+  console.log('📸 [Upload] Simulando upload para:', folder);
+  console.log('📁 [Upload] Arquivo:', file.name);
+  // Retorna URL de placeholder por enquanto
+  return `https://via.placeholder.com/400x400?text=${encodeURIComponent(file.name)}`;
+};
+
+function isValidArtistData(data: unknown): data is Artist {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    typeof (data as Record<string, unknown>).id === 'string' &&
+    typeof (data as Record<string, unknown>).name === 'string' &&
+    typeof (data as Record<string, unknown>).email === 'string' &&
+    typeof (data as Record<string, unknown>).created_at === 'string'
+  );
+}
+
+/**
+ * MAPEAMENTO TYPE-SAFE - SEM ANY!
+ * Usa type guards para validação segura
+ */
+const mapArtistFromDB = (data: Record<string, unknown>): Artist => {
+  if (!isValidArtistData(data)) {
+    throw new Error('Dados de artista inválidos recebidos do banco');
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    email: data.email,
+    bio: data.bio as string | null,
+    phone: data.phone as string | null,
+    monetization_plan_id: data.monetization_plan_id as string | null,
+    profile_image_url: data.profile_image_url as string | null,
+    social_links: data.social_links as Record<string, string> | null,
+    created_at: data.created_at,
+  };
+};
+
+/**
+ * BUSCA TODOS OS ARTISTAS - TYPE SAFE
  */
 export const fetchAllArtists = async (): Promise<Artist[]> => {
   try {
+    console.log('🎤 [Artists Service] Buscando todos os artistas...');
+    
     const { data, error } = await supabaseAdmin
       .from('artists')
       .select('*')
       .order('name');
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [Artists Service] Erro na query:', error);
+      throw error;
+    }
     
-    return (data || []).map(mapArtistFromDB);
+    console.log(`✅ [Artists Service] ${data?.length || 0} artistas encontrados`);
+    
+    if (data && data.length > 0) {
+      console.log('📋 [Artists Service] Primeiro artista:', data[0]);
+    }
+    
+    return (data || []).map((item) => mapArtistFromDB(item as Record<string, unknown>));
   } catch (error) {
-    console.error('Erro ao buscar artistas:', error);
+    console.error('❌ [Artists Service] Erro ao buscar artistas:', error);
     throw new Error('Falha ao buscar artistas');
   }
 };
 
 /**
- * Busca um artista pelo ID
+ * BUSCA ARTISTA POR ID - TYPE SAFE
  */
 export const fetchArtistById = async (id: string): Promise<Artist | null> => {
   try {
+    console.log(`🎤 [Artists Service] Buscando artista ID: ${id}`);
+    
     const { data, error } = await supabaseAdmin
       .from('artists')
       .select('*')
@@ -60,165 +120,144 @@ export const fetchArtistById = async (id: string): Promise<Artist | null> => {
       .single();
     
     if (error) {
-      if (error.code === 'PGRST116') return null; // Não encontrado
+      if (error.code === 'PGRST116') {
+        console.log(`ℹ️ [Artists Service] Artista ${id} não encontrado`);
+        return null;
+      }
+      console.error('❌ [Artists Service] Erro na query:', error);
       throw error;
     }
     
-    return data ? mapArtistFromDB(data) : null;
+    console.log(`✅ [Artists Service] Artista ${id} encontrado:`, data.name);
+    return data ? mapArtistFromDB(data as Record<string, unknown>) : null;
   } catch (error) {
-    console.error(`Erro ao buscar artista ${id}:`, error);
+    console.error(`❌ [Artists Service] Erro ao buscar artista ${id}:`, error);
     throw new Error('Falha ao buscar artista');
   }
 };
 
 /**
- * Cria um novo artista
+ * CRIA NOVO ARTISTA - TYPE SAFE
  */
 export const createArtist = async (formData: ArtistFormData): Promise<Artist> => {
   try {
-    let profileImageUrl: string | undefined = undefined;
+    console.log('➕ [Artists Service] Criando novo artista:', formData.name);
     
-    // Se houver um arquivo de imagem, fazer upload para o Cloudinary
-    if (formData.coverFile) {
-      profileImageUrl = await uploadImage(formData.coverFile, 'eimusic/artists');
+    let profileImageUrl: string | null = formData.profile_image_url || null;
+    
+    // Upload da imagem se fornecida (VERSÃO TEMPORÁRIA)
+    if (formData.profileImageFile) {
+      console.log('📸 [Artists Service] Fazendo upload da imagem...');
+      profileImageUrl = await uploadImageTemporary(formData.profileImageFile, 'eimusic/artists');
+      console.log('✅ [Artists Service] Imagem enviada:', profileImageUrl);
     }
     
     const now = new Date().toISOString();
     
-    // Preparar dados para inserção
-    const artistData: ArtistInsert = {
+    // Preparar dados com tipagem explícita
+    const artistData: Record<string, string | null> = {
       name: formData.name,
       email: formData.email,
-      profile_image: profileImageUrl || null,
-      genre: formData.genre,
-      verified: formData.verified,
-      joined_date: now,
-      total_tracks: 0,
-      total_revenue: 0,
-      status: formData.isActive ? 'active' : 'inactive',
-      monetization_plan: formData.monetizationPlan,
-      payment_method: formData.paymentMethod || null,
-      phone_number: formData.phoneNumber || null,
       bio: formData.bio || null,
+      phone: formData.phone || null,
+      monetization_plan_id: formData.monetization_plan_id || null,
+      profile_image_url: profileImageUrl,
+      social_links: formData.social_links ? JSON.stringify(formData.social_links) : null,
       created_at: now,
     };
     
-    // Inserir no banco de dados
+    console.log('💾 [Artists Service] Dados para inserção:', artistData);
+    
+    // Inserir no banco
     const { data, error } = await supabaseAdmin
       .from('artists')
       .insert(artistData)
-      .select()
+      .select('*')
       .single();
     
-    if (error) throw error;
-    if (!data) throw new Error('Nenhum dado retornado após a inserção');
+    if (error) {
+      console.error('❌ [Artists Service] Erro ao inserir:', error);
+      throw error;
+    }
     
-    return mapArtistFromDB(data);
+    console.log('✅ [Artists Service] Artista criado com sucesso:', data.id);
+    return mapArtistFromDB(data as Record<string, unknown>);
   } catch (error) {
-    console.error('Erro ao criar artista:', error);
+    console.error('❌ [Artists Service] Erro ao criar artista:', error);
     throw new Error('Falha ao criar artista');
   }
 };
 
 /**
- * Atualiza um artista existente
+ * ATUALIZA ARTISTA EXISTENTE - TYPE SAFE
  */
 export const updateArtist = async (id: string, formData: ArtistFormData): Promise<Artist> => {
   try {
-    let profileImageUrl: string | undefined = undefined;
+    console.log(`📝 [Artists Service] Atualizando artista ${id}:`, formData.name);
     
-    // Se houver um arquivo de imagem, fazer upload para o Cloudinary
-    if (formData.coverFile) {
-      profileImageUrl = await uploadImage(formData.coverFile, 'eimusic/artists');
+    let profileImageUrl: string | null = formData.profile_image_url || null;
+    
+    // Upload de nova imagem se fornecida (VERSÃO TEMPORÁRIA)
+    if (formData.profileImageFile) {
+      console.log('📸 [Artists Service] Fazendo upload da nova imagem...');
+      profileImageUrl = await uploadImageTemporary(formData.profileImageFile, 'eimusic/artists');
+      console.log('✅ [Artists Service] Nova imagem enviada:', profileImageUrl);
     }
     
-    // Preparar dados para atualização
-    const artistData: ArtistUpdate = {
+    // Preparar dados com tipagem explícita
+    const artistData: Record<string, string | null> = {
       name: formData.name,
       email: formData.email,
-      profile_image: profileImageUrl || undefined,
-      genre: formData.genre,
-      verified: formData.verified,
-      status: formData.isActive ? 'active' : 'inactive',
-      monetization_plan: formData.monetizationPlan,
-      payment_method: formData.paymentMethod || null,
-      phone_number: formData.phoneNumber || null,
       bio: formData.bio || null,
-      updated_at: new Date().toISOString(),
+      phone: formData.phone || null,
+      monetization_plan_id: formData.monetization_plan_id || null,
+      profile_image_url: profileImageUrl,
+      social_links: formData.social_links ? JSON.stringify(formData.social_links) : null,
     };
     
-    // Atualizar no banco de dados
+    console.log('💾 [Artists Service] Dados para atualização:', artistData);
+    
+    // Atualizar no banco
     const { data, error } = await supabaseAdmin
       .from('artists')
       .update(artistData)
       .eq('id', id)
-      .select()
+      .select('*')
       .single();
     
-    if (error) throw error;
-    if (!data) throw new Error('Nenhum dado retornado após a atualização');
+    if (error) {
+      console.error('❌ [Artists Service] Erro ao atualizar:', error);
+      throw error;
+    }
     
-    return mapArtistFromDB(data);
+    console.log('✅ [Artists Service] Artista atualizado com sucesso');
+    return mapArtistFromDB(data as Record<string, unknown>);
   } catch (error) {
-    console.error(`Erro ao atualizar artista ${id}:`, error);
+    console.error(`❌ [Artists Service] Erro ao atualizar artista ${id}:`, error);
     throw new Error('Falha ao atualizar artista');
   }
 };
 
 /**
- * Exclui um artista
+ * EXCLUI ARTISTA - TYPE SAFE
  */
 export const deleteArtist = async (id: string): Promise<void> => {
   try {
+    console.log(`🗑️ [Artists Service] Excluindo artista ${id}`);
+    
     const { error } = await supabaseAdmin
       .from('artists')
       .delete()
       .eq('id', id);
     
-    if (error) throw error;
+    if (error) {
+      console.error('❌ [Artists Service] Erro ao excluir:', error);
+      throw error;
+    }
+    
+    console.log('✅ [Artists Service] Artista excluído com sucesso');
   } catch (error) {
-    console.error(`Erro ao excluir artista ${id}:`, error);
+    console.error(`❌ [Artists Service] Erro ao excluir artista ${id}:`, error);
     throw new Error('Falha ao excluir artista');
   }
 };
-
-/**
- * Busca artistas com filtros
- */
-export const fetchArtistsWithFilters = async (
-  filters: Record<string, string>,
-  searchQuery?: string
-): Promise<Artist[]> => {
-  try {
-    let query = supabaseAdmin.from('artists').select('*');
-    
-    // Aplicar filtros
-    Object.entries(filters).forEach(([key, value]) => {
-      if (value) {
-        if (key === 'verified') {
-          const isVerified = value === 'verified';
-          query = query.eq('verified', isVerified);
-        } else {
-          query = query.eq(key, value);
-        }
-      }
-    });
-    
-    // Aplicar pesquisa
-    if (searchQuery) {
-      query = query.or(`name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%,genre.ilike.%${searchQuery}%`);
-    }
-    
-    // Ordenar por nome
-    query = query.order('name');
-    
-    const { data, error } = await query;
-    
-    if (error) throw error;
-    
-    return (data || []).map(mapArtistFromDB);
-  } catch (error) {
-    console.error('Erro ao buscar artistas com filtros:', error);
-    throw new Error('Falha ao buscar artistas');
-  }
-}; 

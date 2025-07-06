@@ -2,7 +2,7 @@
 import '../globals.css';
 import { Metadata } from 'next';
 import Sidebar from '@/components/admin/Sidebar';
-import { Header } from '@/components/admin/Header';
+import { Header } from '@/components/admin/PageHeader';
 import { ToastProvider } from '@/components/ui/contexts/ToastContext';
 import { AuthProvider } from '@/contexts/AuthContext';
 

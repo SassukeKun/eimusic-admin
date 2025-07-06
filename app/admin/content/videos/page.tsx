@@ -6,11 +6,12 @@ import { useVideos } from '@/hooks/useVideos';
 import { useArtists } from '@/hooks/useArtists';
 import { Video } from '@/types/admin';
 import { VideoFormData } from '@/types/modal';
+import { Artist} from '@/types/admin';
 
 import PageHeader from '@/components/admin/PageHeader';
 import DataTable from '@/components/admin/DataTable';
 import FilterBar from '@/components/admin/FilterBar';
-import SearchBar from '@/components/admin/SearchBar';
+import SearchBar from '@/components/ui/SearchBar';
 import Button from '@/components/admin/Button';
 import EmptyState from '@/components/admin/EmptyState';
 import Skeleton from '@/components/admin/Skeleton';
@@ -29,7 +30,6 @@ export default function VideosPage() {
     error, 
     filters,
     searchQuery,
-    loadVideos,
     createVideo,
     updateVideo,
     deleteVideo,
@@ -146,7 +146,7 @@ export default function VideosPage() {
     {
       key: 'actions',
       label: 'Ações',
-      render: (_: any, video: Video) => (
+      render: (_: unknown, video: Video) => (
         <div className="flex space-x-2">
           <Button 
             variant="outline" 
@@ -210,9 +210,12 @@ export default function VideosPage() {
           onChange={updateSearch}
         />
         <FilterBar 
-          filters={filterOptions} 
+          filters={filterOptions.map(filter => ({
+            ...filter,
+            type: 'select'
+          }))} 
           activeFilters={filters}
-          onFilterChange={updateFilters}
+          onFilterChange={(key: string, value: string) => updateFilters({ [key]: value })}
           onReset={resetFilters}
         />
       </div>
@@ -234,7 +237,7 @@ export default function VideosPage() {
           }
         />
       ) : (
-        <DataTable 
+        <DataTable<Video>
           data={videos}
           columns={columns}
           onRowClick={handleEditVideo}
@@ -252,10 +255,11 @@ export default function VideosPage() {
 
       {isDeleteModalOpen && selectedVideo && (
         <ConfirmationModal
+          isOpen={isDeleteModalOpen}
           title="Excluir Vídeo"
           message={`Tem certeza que deseja excluir o vídeo "${selectedVideo.title}"? Esta ação não pode ser desfeita.`}
-          confirmLabel="Excluir"
-          cancelLabel="Cancelar"
+          confirmText="Excluir"
+          cancelText="Cancelar"
           onConfirm={handleDeleteConfirm}
           onCancel={() => setIsDeleteModalOpen(false)}
         />

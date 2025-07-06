@@ -1,200 +1,121 @@
-// hooks/useToast.ts
+// hooks/useToast.ts - HOOK SIMPLES SEM DEPENDÊNCIAS EXTERNAS
 'use client';
 
-import { useCallback } from 'react';
-import { useToastContext } from '@/components/ui/contexts/ToastContext';
-import type { CreateToastProps } from '@/types/toast';
+import { useState, useCallback } from 'react';
 
-/**
- * Interface para métodos de conveniência do useToast
- */
-interface ToastMethods {
-  readonly success: (title: string, message?: string, options?: Omit<CreateToastProps, 'type' | 'title' | 'message'>) => string;
-  readonly error: (title: string, message?: string, options?: Omit<CreateToastProps, 'type' | 'title' | 'message'>) => string;
-  readonly warning: (title: string, message?: string, options?: Omit<CreateToastProps, 'type' | 'title' | 'message'>) => string;
-  readonly info: (title: string, message?: string, options?: Omit<CreateToastProps, 'type' | 'title' | 'message'>) => string;
-  readonly loading: (title: string, message?: string) => string;
-  readonly promise: <T>(
-    promise: Promise<T>,
-    options: {
-      readonly loading: string;
-      readonly success: string | ((data: T) => string);
-      readonly error: string | ((error: Error) => string);
-    }
-  ) => Promise<T>;
+export interface Toast {
+  id: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+  title: string;
+  description?: string;
+  duration?: number;
 }
 
-/**
- * Interface completa do hook useToast
- */
-interface UseToastReturn extends ToastMethods {
-  readonly toast: (props: CreateToastProps) => string;
-  readonly dismiss: (id: string) => void;
-  readonly dismissAll: () => void;
-  readonly toasts: readonly import('@/types/toast').Toast[];
+interface ToastState {
+  toasts: Toast[];
 }
 
+const toastState: ToastState = { toasts: [] };
+let listeners: Array<(state: ToastState) => void> = [];
+
+const notifyListeners = () => {
+  listeners.forEach(listener => listener(toastState));
+};
+
+const addToast = (toast: Omit<Toast, 'id'>) => {
+  const id = Math.random().toString(36).substring(2, 9);
+  const newToast: Toast = {
+    id,
+    duration: 5000,
+    ...toast,
+  };
+  
+  toastState.toasts.push(newToast);
+  notifyListeners();
+  
+  // Auto remove after duration
+  if (newToast.duration && newToast.duration > 0) {
+    setTimeout(() => {
+      removeToast(id);
+    }, newToast.duration);
+  }
+  
+  return id;
+};
+
+const removeToast = (id: string) => {
+  toastState.toasts = toastState.toasts.filter(toast => toast.id !== id);
+  notifyListeners();
+};
+
+const clearAllToasts = () => {
+  toastState.toasts = [];
+  notifyListeners();
+};
+
 /**
- * Custom hook para usar o sistema de toasts
- * Oferece métodos de conveniência e API simplificada
+ * HOOK SIMPLES DE TOAST - SEM CONTEXTO COMPLEXO
+ * 
+ * Funcionalidades:
+ * 1. Success, error, warning, info
+ * 2. Auto-dismiss configurável
+ * 3. Remoção manual
+ * 4. Estado global simples
+ * 5. Zero dependências externas
  */
-export function useToast(): UseToastReturn {
-  const { state, addToast, removeToast, clearAllToasts } = useToastContext();
-
-  /**
-   * Método base para criar toasts
-   */
-  const toast = useCallback((props: CreateToastProps): string => {
-    return addToast(props);
-  }, [addToast]);
-
-  /**
-   * Método de conveniência para toasts de sucesso
-   */
-  const success = useCallback((
-    title: string, 
-    message?: string, 
-    options?: Omit<CreateToastProps, 'type' | 'title' | 'message'>
-  ): string => {
-    return addToast({
-      type: 'success',
-      title,
-      message,
-      ...options,
-    });
-  }, [addToast]);
-
-  /**
-   * Método de conveniência para toasts de erro
-   */
-  const error = useCallback((
-    title: string, 
-    message?: string, 
-    options?: Omit<CreateToastProps, 'type' | 'title' | 'message'>
-  ): string => {
-    return addToast({
-      type: 'error',
-      title,
-      message,
-      duration: 8000, // Erros ficam mais tempo visíveis
-      ...options,
-    });
-  }, [addToast]);
-
-  /**
-   * Método de conveniência para toasts de aviso
-   */
-  const warning = useCallback((
-    title: string, 
-    message?: string, 
-    options?: Omit<CreateToastProps, 'type' | 'title' | 'message'>
-  ): string => {
-    return addToast({
-      type: 'warning',
-      title,
-      message,
-      duration: 7000, // Avisos ficam um pouco mais tempo
-      ...options,
-    });
-  }, [addToast]);
-
-  /**
-   * Método de conveniência para toasts informativos
-   */
-  const info = useCallback((
-    title: string, 
-    message?: string, 
-    options?: Omit<CreateToastProps, 'type' | 'title' | 'message'>
-  ): string => {
-    return addToast({
-      type: 'info',
-      title,
-      message,
-      ...options,
-    });
-  }, [addToast]);
-
-  /**
-   * Método para toasts de carregamento (sem auto-dismiss)
-   */
-  const loading = useCallback((title: string, message?: string): string => {
-    return addToast({
-      type: 'info',
-      title,
-      message,
-      duration: undefined, // Não remove automaticamente
-      dismissible: false, // Não pode ser fechado manualmente
-    });
-  }, [addToast]);
-
-  /**
-   * Método para lidar com promises
-   * Mostra loading, depois success ou error baseado no resultado
-   */
-  const promise = useCallback(async <T>(
-    promiseToResolve: Promise<T>,
-    options: {
-      readonly loading: string;
-      readonly success: string | ((data: T) => string);
-      readonly error: string | ((error: Error) => string);
-    }
-  ): Promise<T> => {
-    // Mostra toast de loading
-    const loadingId = loading(options.loading);
-
-    try {
-      const result = await promiseToResolve;
-      
-      // Remove loading toast
-      removeToast(loadingId);
-      
-      // Mostra toast de sucesso
-      const successMessage = typeof options.success === 'function' 
-        ? options.success(result) 
-        : options.success;
-      
-      success('Operação concluída', successMessage);
-      
-      return result;
-    } catch (err) {
-      // Remove loading toast
-      removeToast(loadingId);
-      
-      // Mostra toast de erro
-      const errorMessage = typeof options.error === 'function' 
-        ? options.error(err as Error) 
-        : options.error;
-      
-      error('Erro na operação', errorMessage);
-      
-      throw err;
-    }
-  }, [removeToast, loading, success, error]);
-
-  /**
-   * Método para remover um toast específico
-   */
+export function useToast() {
+  const [, forceUpdate] = useState({});
+  
+  // Subscribe to toast state changes
+  const subscribe = useCallback((listener: (state: ToastState) => void) => {
+    listeners.push(listener);
+    return () => {
+      listeners = listeners.filter(l => l !== listener);
+    };
+  }, []);
+  
+  // Force re-render when toasts change
+  const rerender = useCallback(() => {
+    forceUpdate({});
+  }, []);
+  
+  // Subscribe to changes
+  useState(() => {
+    const unsubscribe = subscribe(rerender);
+    return unsubscribe;
+  });
+  
+  const success = useCallback((title: string, description?: string) => {
+    return addToast({ type: 'success', title, description });
+  }, []);
+  
+  const error = useCallback((title: string, description?: string) => {
+    return addToast({ type: 'error', title, description });
+  }, []);
+  
+  const warning = useCallback((title: string, description?: string) => {
+    return addToast({ type: 'warning', title, description });
+  }, []);
+  
+  const info = useCallback((title: string, description?: string) => {
+    return addToast({ type: 'info', title, description });
+  }, []);
+  
   const dismiss = useCallback((id: string) => {
     removeToast(id);
-  }, [removeToast]);
-
-  /**
-   * Método para remover todos os toasts
-   */
+  }, []);
+  
   const dismissAll = useCallback(() => {
     clearAllToasts();
-  }, [clearAllToasts]);
-
+  }, []);
+  
   return {
-    toast,
+    toasts: toastState.toasts,
     success,
     error,
     warning,
     info,
-    loading,
-    promise,
     dismiss,
     dismissAll,
-    toasts: state.toasts,
   };
 }
