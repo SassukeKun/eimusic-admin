@@ -1,30 +1,30 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertTriangle, X, Music, Trash2 } from 'lucide-react';
-import type { Track } from '@/types/tracks';
+import { AlertTriangle, X, User as UserIcon, Trash2, Shield, Crown } from 'lucide-react';
+import type { User } from '@/types/users';
 
-interface DeleteTrackModalProps {
+interface DeleteUserModalProps {
   isOpen: boolean;
-  track: Track | null;
+  user: User | null;
   onClose: () => void;
-  onConfirm: (trackId: string) => Promise<void>;
+  onConfirm: (userId: string) => Promise<void>;
 }
 
-export default function DeleteTrackModal({
+export default function DeleteUserModal({
   isOpen,
-  track,
+  user,
   onClose,
   onConfirm
-}: DeleteTrackModalProps) {
+}: DeleteUserModalProps) {
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleDelete = async () => {
-    if (!track) return;
+    if (!user) return;
     
     setIsDeleting(true);
     try {
-      await onConfirm(track.id);
+      await onConfirm(user.id);
       onClose();
     } catch (error) {
       console.error('Erro ao deletar:', error);
@@ -33,13 +33,15 @@ export default function DeleteTrackModal({
     }
   };
 
-  const formatDuration = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
   };
 
-  if (!isOpen || !track) return null;
+  if (!isOpen || !user) return null;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
@@ -49,7 +51,7 @@ export default function DeleteTrackModal({
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <AlertTriangle className="w-6 h-6 mr-3" />
-              <h2 className="text-xl font-semibold">Excluir Faixa</h2>
+              <h2 className="text-xl font-semibold">Excluir Usuário</h2>
             </div>
             <button
               onClick={onClose}
@@ -69,7 +71,7 @@ export default function DeleteTrackModal({
                   Esta ação não pode ser desfeita
                 </h3>
                 <p className="text-sm text-red-700">
-                  Todos os dados da faixa serão permanentemente removidos do sistema.
+                  Todos os dados do usuário serão permanentemente removidos do sistema.
                 </p>
               </div>
             </div>
@@ -77,45 +79,73 @@ export default function DeleteTrackModal({
 
           <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
             <div className="flex items-center space-x-4">
-              {track.coverUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
+              {user.profileImageUrl ? (
                 <img
-                  src={track.coverUrl}
-                  alt={track.title}
-                  className="w-16 h-16 rounded-lg object-cover"
+                  src={user.profileImageUrl}
+                  alt={user.name}
+                  className="w-16 h-16 rounded-full object-cover"
                 />
               ) : (
-                <div className="w-16 h-16 bg-gray-200 rounded-lg flex items-center justify-center">
-                  <Music className="w-8 h-8 text-gray-400" />
+                <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center">
+                  <UserIcon className="w-8 h-8 text-gray-400" />
                 </div>
               )}
               <div className="flex-1">
-                <h3 className="font-medium text-gray-900">{track.title}</h3>
-                <p className="text-sm text-gray-600">{track.artistName}</p>
-                <div className="flex items-center space-x-3 mt-1">
+                <h3 className="font-medium text-gray-900">{user.name}</h3>
+                <p className="text-sm text-gray-600">{user.email}</p>
+                <div className="flex items-center space-x-2 mt-1">
+                  {user.hasActiveSubscription && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                      <Crown className="inline w-3 h-3 mr-1" />
+                      Assinante
+                    </span>
+                  )}
+                  {user.isAdmin && (
+                    <span className="text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-800">
+                      <Shield className="inline w-3 h-3 mr-1" />
+                      Admin
+                    </span>
+                  )}
                   <span className="text-xs text-gray-500">
-                    {track.streams.toLocaleString()} streams
-                  </span>
-                  <span className="text-xs text-gray-500">
-                    {formatDuration(track.duration)}
+                    Desde {formatDate(user.createdAt)}
                   </span>
                 </div>
               </div>
             </div>
           </div>
 
+          {user.isAdmin && (
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6">
+              <div className="flex items-start">
+                <Shield className="w-5 h-5 text-orange-500 mt-0.5 mr-3 flex-shrink-0" />
+                <div>
+                  <h4 className="font-medium text-orange-800 mb-1">
+                    Atenção: Usuário Administrador
+                  </h4>
+                  <p className="text-sm text-orange-700">
+                    Este usuário possui privilégios administrativos. Certifique-se de que há outros administradores ativos antes de prosseguir.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
             <h4 className="font-medium text-yellow-800 mb-2">
               O que será perdido:
             </h4>
             <ul className="text-sm text-yellow-700 space-y-1">
-              <li>• Arquivo de áudio e capa da faixa</li>
-              <li>• Histórico de {track.streams.toLocaleString()} reproduções</li>
-              <li>• Dados de análise e métricas</li>
-              {track.revenue && (
-                <li>• Receita acumulada: {track.revenue.toLocaleString()} MT</li>
+              <li>• Perfil e dados pessoais do usuário</li>
+              <li>• Histórico de playlists e favoritos</li>
+              <li>• Dados de pagamento e assinatura</li>
+              {user.hasActiveSubscription && (
+                <li>• Assinatura ativa será cancelada</li>
               )}
-              <li>• Relação com playlists e favoritos dos usuários</li>
+              <li>• Histórico de reproduções e preferências</li>
+              <li>• Comentários e avaliações</li>
+              {user.isAdmin && (
+                <li>• Acesso administrativo será revogado</li>
+              )}
             </ul>
           </div>
 

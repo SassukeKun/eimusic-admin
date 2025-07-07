@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -33,6 +34,7 @@ export default function TracksPage() {
     fetchTracks();
     fetchArtists();
     fetchAlbums();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage, searchQuery, filters]);
 
   const fetchTracks = async () => {

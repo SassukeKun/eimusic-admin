@@ -1,184 +1,134 @@
-// src/app/api/admin/artists/route.ts
-
+// app/api/artists/route.ts
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabase';
+import type { ArtistDB, ArtistCreateData } from '@/types/artists';
+import { mapArtistFromDB } from '@/types/artists';
 
-// Função para criar cliente Supabase com chave de serviço para bypass de RLS
-function createServiceRoleClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (!supabaseUrl || !supabaseServiceKey) {
-    console.error('Variáveis de ambiente do Supabase não configuradas');
-    throw new Error('Configuração do Supabase incompleta');
-  }
-  
-  return createClient(supabaseUrl, supabaseServiceKey);
-}
-
-// GET - Listar artistas
 export async function GET(request: Request) {
-  console.log('📋 [API] Iniciando GET /api/admin/artists...');
-  
   try {
-    const supabase = createServiceRoleClient();
-    
-    // Extrair parâmetros de query
     const { searchParams } = new URL(request.url);
-    const query = searchParams.get('query');
-    
-    // Construir query
-    let dbQuery = supabase
+    const page = parseInt(searchParams.get('page') || '1');
+    const pageSize = parseInt(searchParams.get('pageSize') || '20');
+    const search = searchParams.get('search') || '';
+    const verified = searchParams.get('verified');
+    const province = searchParams.get('province');
+    const hasMonetization = searchParams.get('hasMonetization');
+    const sortBy = searchParams.get('sortBy') || 'created_at';
+    const sortDir = searchParams.get('sortDir') || 'desc';
+
+    let query = supabaseAdmin
       .from('artists')
-      .select('*');
-    
-    // Adicionar filtros se necessário
-    if (query) {
-      dbQuery = dbQuery.ilike('name', `%${query}%`);
+      .select('*', { count: 'exact' });
+
+    if (search) {
+      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
     }
-    
-    // Executar query
-    const { data, error } = await dbQuery;
-    
-    if (error) {
-      console.error('❌ [API] Erro ao buscar artistas:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+
+    if (verified !== null && verified !== undefined) {
+      query = query.eq('verified', verified === 'true');
     }
-    
-    console.log(`✅ [API] ${data?.length || 0} artistas encontrados`);
-    return NextResponse.json(data || []);
-    
+
+    if (province) {
+      query = query.eq('province', province);
+    }
+
+    if (hasMonetization !== null && hasMonetization !== undefined) {
+      if (hasMonetization === 'true') {
+        query = query.not('monetization_plan_id', 'is', null);
+      } else {
+        query = query.is('monetization_plan_id', null);
+      }
+    }
+
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
+
+    query = query
+      .order(sortBy, { ascending: sortDir === 'asc' })
+      .range(from, to);
+
+    const { data: artistsData, error: artistsError, count } = await query;
+
+    if (artistsError) throw artistsError;
+
+    // Buscar planos de monetização para os artistas que têm
+    const monetizationPlanIds = [...new Set(
+      (artistsData || [])
+        .map(artist => artist.monetization_plan_id)
+        .filter(Boolean)
+    )];
+
+    const { data: plansData } = monetizationPlanIds.length > 0
+      ? await supabaseAdmin
+          .from('monetization_plans')
+          .select('id, name')
+          .in('id', monetizationPlanIds)
+      : { data: [] };
+
+    const plansMap = new Map(
+      (plansData || []).map((plan: { id: string; name: string }) => [plan.id, plan.name])
+    );
+
+    // Mapear artistas com nomes dos planos
+    const artists = (artistsData || []).map((artist: ArtistDB) => ({
+      ...mapArtistFromDB(artist),
+      monetizationPlanName: artist.monetization_plan_id 
+        ? plansMap.get(artist.monetization_plan_id) 
+        : undefined,
+    }));
+
+    const totalPages = Math.ceil((count || 0) / pageSize);
+
+    return NextResponse.json({
+      data: artists,
+      total: count || 0,
+      page,
+      pageSize,
+      totalPages,
+      hasNext: page < totalPages,
+      hasPrevious: page > 1,
+    });
+
   } catch (error) {
-    console.error('❌ [API] Erro não tratado:', error);
-    const message = error instanceof Error ? error.message : 'Erro desconhecido';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Erro ao buscar artists:', error);
+    return NextResponse.json(
+      { error: 'Falha ao buscar artistas' },
+      { status: 500 }
+    );
   }
 }
 
-// POST - Criar artista
 export async function POST(request: Request) {
-  console.log('📋 [API] Iniciando POST /api/admin/artists...');
-  
   try {
-    const supabase = createServiceRoleClient();
     const body = await request.json();
-    
-    // Validação básica
-    if (!body.name || !body.email) {
-      return NextResponse.json(
-        { error: 'Nome e email são obrigatórios' },
-        { status: 400 }
-      );
-    }
-    
-    // Inserir artista
-    const { data, error } = await supabase
+    const artistData: ArtistCreateData = {
+      name: body.name,
+      email: body.email,
+      bio: body.bio || null,
+      phone: body.phone || null,
+      monetization_plan_id: body.monetizationPlanId || null,
+      profile_image_url: body.profileImageUrl || null,
+      social_links: body.socialLinks || null,
+      verified: body.verified || false,
+      subscribers: 0,
+      province: body.province || null,
+    };
+
+    const { data, error } = await supabaseAdmin
       .from('artists')
-      .insert({
-        name: body.name,
-        email: body.email,
-        verified: body.verified || false,
-        bio: body.bio || null,
-        phone: body.phone || null
-      })
+      .insert(artistData)
       .select()
       .single();
-    
-    if (error) {
-      console.error('❌ [API] Erro ao criar artista:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    
-    console.log('✅ [API] Artista criado com sucesso:', data?.id);
-    return NextResponse.json(data, { status: 201 });
-    
-  } catch (error) {
-    console.error('❌ [API] Erro não tratado:', error);
-    const message = error instanceof Error ? error.message : 'Erro desconhecido';
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
 
-// PUT - Atualizar artista
-export async function PUT(request: Request) {
-  console.log('📋 [API] Iniciando PUT /api/admin/artists...');
-  
-  try {
-    const supabase = createServiceRoleClient();
-    const body = await request.json();
-    
-    // Validação básica
-    if (!body.id || !body.name || !body.email) {
-      return NextResponse.json(
-        { error: 'ID, nome e email são obrigatórios' },
-        { status: 400 }
-      );
-    }
-    
-    // Atualizar artista
-    const { data, error } = await supabase
-      .from('artists')
-      .update({
-        name: body.name,
-        email: body.email,
-        verified: body.verified,
-        bio: body.bio || null,
-        phone: body.phone || null
-      })
-      .eq('id', body.id)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('❌ [API] Erro ao atualizar artista:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    
-    console.log('✅ [API] Artista atualizado com sucesso:', data?.id);
-    return NextResponse.json(data);
-    
-  } catch (error) {
-    console.error('❌ [API] Erro não tratado:', error);
-    const message = error instanceof Error ? error.message : 'Erro desconhecido';
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
-}
+    if (error) throw error;
 
-// DELETE - Excluir artista
-export async function DELETE(request: Request) {
-  console.log('📋 [API] Iniciando DELETE /api/admin/artists...');
-  
-  try {
-    // Extrair parâmetros
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get('id');
-    
-    if (!id) {
-      return NextResponse.json(
-        { error: 'ID do artista é obrigatório' },
-        { status: 400 }
-      );
-    }
-    
-    const supabase = createServiceRoleClient();
-    
-    // Excluir artista
-    const { error } = await supabase
-      .from('artists')
-      .delete()
-      .eq('id', id);
-    
-    if (error) {
-      console.error('❌ [API] Erro ao excluir artista:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-    
-    console.log('✅ [API] Artista excluído com sucesso:', id);
-    return NextResponse.json({ success: true });
-    
+    return NextResponse.json(mapArtistFromDB(data));
+
   } catch (error) {
-    console.error('❌ [API] Erro não tratado:', error);
-    const message = error instanceof Error ? error.message : 'Erro desconhecido';
-    return NextResponse.json({ error: message }, { status: 500 });
+    console.error('Erro ao criar artist:', error);
+    return NextResponse.json(
+      { error: 'Falha ao criar artista' },
+      { status: 500 }
+    );
   }
 }
